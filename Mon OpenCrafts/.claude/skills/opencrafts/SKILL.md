@@ -21,6 +21,10 @@ Enchaîne sans demander de confirmation :
 1. `python .claude/skills/opencrafts/scripts/installer.py`
    Il calcule les harnais par défaut (sans IA), écrit `OPENCRAFTS.md`, `JOURNAL.md`, `MISSION.md`,
    `comptabilite.json`, et **ouvre le dashboard** à droite de l'écran.
+   S'il répond « Arrêt » (le dossier contient déjà une OpenCrafts faite à la main), **ne force jamais** :
+   dis-le à l'utilisateur ; ses agents et sa constitution restent tels quels, et le dashboard s'ouvre avec
+   `python .claude/skills/opencrafts/scripts/dashboard.py`. `--forcer` seulement sur sa demande explicite,
+   après une sauvegarde.
 2. Fais un résumé court de ce qui est installé : les dix agents en une ligne chacun (nom, niveau, ce
    qu'il fait seul), le plafond de dépense (0 €), et la règle d'or : *rien ne sort (mail, post,
    paiement, contrat) sans votre oui*. Dis que le dashboard est ouvert à droite et qu'on peut cliquer

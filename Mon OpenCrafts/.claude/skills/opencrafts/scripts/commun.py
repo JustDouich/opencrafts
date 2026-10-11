@@ -14,8 +14,10 @@ SKILL = os.path.dirname(ICI)
 
 
 def dossier():
-    """Dossier de l'OpenCrafts : celui du projet Claude Code (CLAUDE_PROJECT_DIR), sinon le dossier courant."""
-    return os.path.abspath(os.environ.get('CLAUDE_PROJECT_DIR') or os.getcwd())
+    """Dossier de l'OpenCrafts : OPENCRAFTS_DOSSIER s'il est posé (un espace de travail Claude Code qui pilote
+    une OpenCrafts rangée ailleurs), sinon celui du projet Claude Code (CLAUDE_PROJECT_DIR), sinon le dossier
+    courant."""
+    return os.path.abspath(os.environ.get('OPENCRAFTS_DOSSIER') or os.environ.get('CLAUDE_PROJECT_DIR') or os.getcwd())
 
 
 def interne(*parties):

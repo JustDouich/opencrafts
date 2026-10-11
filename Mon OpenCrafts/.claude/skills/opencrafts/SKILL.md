@@ -1,14 +1,33 @@
 ---
 name: opencrafts
-description: Installe et fait vivre une OpenCrafts (une mini entreprise de dix agents autour d'un produit) dans ce dossier, avec Claude Code. À utiliser dès que l'utilisateur dit « installe mon opencrafts », parle d'OpenCrafts, de ses agents (Orchestrateur, Contexte, R&D, Comptable, Juridique, RH, Pivot, Commercial, Marketing, Innovation), de son produit, de son dashboard ou SAW, de compta, de « point du jour », de « file d'arbitrage », ou quand le dossier contient OPENCRAFTS.md ou JOURNAL.md.
+description: Installe et fait vivre une OpenCrafts (une mini entreprise de dix agents autour d'un produit) dans ce dossier, avec Claude (Claude Code, claude.ai, l'app Claude, le téléphone). À utiliser dès que l'utilisateur dit « installe mon opencrafts », parle d'OpenCrafts, de ses agents (Orchestrateur, Contexte, R&D, Comptable, Juridique, RH, Pivot, Commercial, Marketing, Innovation), de son produit, de son dashboard ou SAW, de compta, de « point du jour », de « file d'arbitrage », ou quand le dossier contient OPENCRAFTS.md ou JOURNAL.md.
 ---
 
-# OpenCrafts dans Claude Code
+# OpenCrafts dans Claude
 
 Une OpenCrafts est une mini entreprise autour d'un produit : dix agents qui travaillent pour
 l'utilisateur, chacun dans un **harnais** (ce qu'il fait seul), sous des **interdits** qu'aucun réglage
-ne lève. Tout vit dans ce dossier. Le dashboard (app de bureau, à droite de l'écran) montre l'activité
-en direct : chaque demande et chaque action sont signalées automatiquement par les hooks du dossier.
+ne lève. Tout vit dans ce dossier. Le dashboard montre les agents, le tableau de pilotage et la compta.
+**Rien à installer** : c'est une page, que Claude affiche lui-même.
+
+## 0. Où tu tournes : choisis le bon dashboard, sans le demander à l'utilisateur
+
+- **Claude Code sur l'ordinateur** (tu peux lancer `python` dans le dossier) : dashboard **en direct**.
+  `python .claude/skills/opencrafts/scripts/dashboard.py` démarre un petit serveur local et donne son
+  adresse (`http://localhost:5190/` en général). **Ouvre cette adresse dans ton panneau navigateur, à
+  droite de la conversation** (outil `preview_start` avec `url`, ou l'outil de navigateur intégré que tu
+  as) ; si tu n'as aucun outil de navigateur, donne le lien à l'utilisateur. Les hooks du dossier animent
+  ensuite les agents à chaque action, et les clics du tableau de pilotage te reviennent au message suivant.
+- **claude.ai, l'app Claude en mode conversation, le téléphone** (pas de Python sur l'ordinateur de
+  l'utilisateur) : dashboard **instantané**. Lance `python .claude/skills/opencrafts/scripts/instantane.py`
+  dans ton environnement d'exécution ; il écrit `OpenCrafts-dashboard.html`, une page autonome. **Publie
+  cette page telle quelle** dans la conversation (page / artefact HTML), sans la réécrire ni la résumer : c'est
+  le même dashboard que dans Claude Code. Dis qu'il montre l'état du moment et qu'il se met à jour à chaque
+  « mon OpenCrafts ». Un clic sur une décision y prépare une phrase que l'utilisateur t'envoie : applique-la
+  avec `chantiers.py` ou `arbitrer.py`. Pour garder les fichiers d'une conversation à l'autre sur claude.ai,
+  propose un Projet « Mon OpenCrafts » où ranger les fichiers produits.
+- Ne fabrique **jamais** un autre tableau de bord à ta façon : si aucune des deux voies ne marche, dis-le et
+  donne l'état en texte.
 
 Les scripts sont dans `.claude/skills/opencrafts/scripts/`. Lance-les depuis la racine du dossier avec
 `python` (ils sont autorisés d'avance dans `.claude/settings.json`). Écris toujours en français, en
@@ -20,15 +39,15 @@ Enchaîne sans demander de confirmation :
 
 1. `python .claude/skills/opencrafts/scripts/installer.py`
    Il calcule les harnais par défaut (sans IA), écrit `OPENCRAFTS.md`, `JOURNAL.md`, `MISSION.md`,
-   `comptabilite.json`, et **ouvre le dashboard** à droite de l'écran.
+   `comptabilite.json`, et démarre le dashboard. Affiche-le aussitôt comme dit en section 0.
    S'il répond « Arrêt » (le dossier contient déjà une OpenCrafts faite à la main), **ne force jamais** :
    dis-le à l'utilisateur ; ses agents et sa constitution restent tels quels, et le dashboard s'ouvre avec
    `python .claude/skills/opencrafts/scripts/dashboard.py`. `--forcer` seulement sur sa demande explicite,
    après une sauvegarde.
 2. Fais un résumé court de ce qui est installé : les dix agents en une ligne chacun (nom, niveau, ce
    qu'il fait seul), le plafond de dépense (0 €), et la règle d'or : *rien ne sort (mail, post,
-   paiement, contrat) sans votre oui*. Dis que le dashboard est ouvert à droite et qu'on peut cliquer
-   sur un agent pour entrer dedans.
+   paiement, contrat) sans votre oui*. Dis que le dashboard est affiché à droite (ou dans la
+   conversation) et qu'on peut cliquer sur un agent pour entrer dedans.
 3. **Ensuite seulement**, pose les questions sur le produit, dans un seul message :
    - « Donnez-moi le lien de votre produit ou de votre activité (site, boutique, page) : je lis tout. »
    - « En une phrase, que voulez-vous faire grandir ? » (facultatif si le lien suffit)
@@ -46,6 +65,15 @@ Enchaîne sans demander de confirmation :
 4. Propose les trois premières actions utiles, une par agent concerné (par exemple Marketing : trois
    idées de posts ; Commercial : cinq types de revendeurs ; Comptable : poser le prix de revient). Ne
    les lance pas : l'utilisateur choisit.
+
+## Le harnais du produit : à lire avant d'agir
+
+`HARNAIS.md` (nom du produit, contexte, précisions ajoutées au fil du temps) est ce que tous les agents
+lisent avant d'agir. L'utilisateur le remplit dans le dashboard : à la première ouverture, deux questions
+(le nom, puis le contexte), ensuite le bouton **HARNAIS**, toujours en vue. Quand il le modifie, tu en es
+prévenu au message suivant. Pour l'enrichir toi-même (après la lecture d'un lien, une réponse de
+l'utilisateur) : `python .claude/skills/opencrafts/scripts/harnais.py maj --nom "..." --contexte "..." --ajout "..."`
+(`harnais.py voir` pour le relire). Ne remplace jamais un contexte écrit par l'utilisateur : ajoute une précision.
 
 ## 3. Travailler avec les agents
 
@@ -90,7 +118,7 @@ avec des boutons pour que l'utilisateur décide (oui, non, plus tard, débloquer
 
 ## 4. « mon OpenCrafts », « où en est-on », « point du jour »
 
-`python .claude/skills/opencrafts/scripts/dashboard.py` (rouvre le dashboard s'il est fermé), rappelle que
+Affiche le dashboard comme dit en section 0 (en direct, ou instantané republié), rappelle que
 tout ce qui attend une décision est dans le tableau PILOTAGE, puis en texte : les demandes à arbitrer numérotées, les trois faits les plus récents du journal, et « Répondez
 par exemple : 1 oui, 2 non, 3 plus tard. »
 

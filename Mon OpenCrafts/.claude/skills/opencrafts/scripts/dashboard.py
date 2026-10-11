@@ -1,77 +1,112 @@
-"""Ouvre le dashboard OpenCrafts (app de bureau Electron) sur la droite de l'écran, branché sur ce dossier.
+"""Ouvre le dashboard OpenCrafts, sans rien à installer.
 
-Où il cherche l'app, dans l'ordre :
-  1. la variable d'environnement OPENCRAFTS_APP (chemin d'un .exe) ;
-  2. .opencrafts/config.json, clé "app" : un chemin, ou une liste [executable, arguments...] ;
-  3. %LOCALAPPDATA%\\OpenCrafts\\OpenCrafts.exe (installée par ce script au premier lancement) ;
-  4. sinon il la télécharge depuis l'adresse "telechargement" de config.json (ou celle par défaut).
+Par défaut (depuis la 0.5.0) : le dashboard est une page servie en local par `serveur.py` (Python seul),
+que Claude Code affiche dans son panneau navigateur, à droite de la conversation, en direct. Ce script
+démarre le serveur s'il ne tourne pas et donne son adresse.
 
-Usage : python dashboard.py [ouvrir|etat]
+Option : l'ancienne app de bureau (fenêtre Windows séparée), seulement si on la demande explicitement :
+  - variable d'environnement OPENCRAFTS_APP (chemin d'un .exe), ou
+  - .opencrafts/config.json, clé "app" : un chemin, ou une liste [executable, arguments...].
+Elle n'est jamais téléchargée automatiquement.
+
+Usage : python dashboard.py [ouvrir|etat|arreter]
 """
-import json
 import os
 import subprocess
 import sys
-import urllib.request
+import time
 
 from commun import dossier, evenement, interne, lire_json
 
-TELECHARGEMENT = 'https://github.com/JustDouich/opencrafts/releases/latest/download/OpenCrafts-Dashboard.exe'
-LOCAL = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), 'OpenCrafts', 'OpenCrafts.exe')
+ICI = os.path.dirname(os.path.abspath(__file__))
 
 
-def vivant():
-    """Vrai si le dashboard de ce dossier tourne (fichier pid écrit par l'app)."""
-    pid = lire_json(interne('dashboard.json'), {}).get('pid')
-    if not pid:
-        return False
-    try:
-        if os.name == 'nt':
-            sortie = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'], capture_output=True, text=True, timeout=5).stdout
-            return str(pid) in sortie
-        os.kill(pid, 0)
-        return True
-    except Exception:
-        return False
+def _detache():
+    options = {'stdin': subprocess.DEVNULL, 'stdout': subprocess.DEVNULL, 'stderr': subprocess.DEVNULL, 'close_fds': True}
+    if os.name == 'nt':
+        options['creationflags'] = 0x00000008 | 0x00000200   # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+    else:
+        options['start_new_session'] = True
+    return options
 
 
-def commande():
+def app_demandee():
+    """Commande de l'app de bureau si l'utilisateur l'a choisie, sinon None."""
     cfg = lire_json(interne('config.json'), {})
     app = os.environ.get('OPENCRAFTS_APP') or cfg.get('app')
     if isinstance(app, list) and app:
         return app
     if isinstance(app, str) and os.path.exists(app):
         return [app]
-    if os.path.exists(LOCAL):
-        return [LOCAL]
-    url = cfg.get('telechargement') or TELECHARGEMENT
-    os.makedirs(os.path.dirname(LOCAL), exist_ok=True)
-    tmp = LOCAL + '.part'
-    urllib.request.urlretrieve(url, tmp)
-    os.replace(tmp, LOCAL)
-    return [LOCAL]
+    return None
+
+
+def adresse():
+    from serveur import adresse_active
+    return adresse_active()
+
+
+def demarrer_serveur():
+    """Démarre serveur.py pour ce dossier s'il ne tourne pas ; renvoie son adresse (ou None)."""
+    deja = adresse()
+    if deja:
+        return deja
+    env = dict(os.environ, OPENCRAFTS_DOSSIER=dossier())
+    subprocess.Popen([sys.executable, os.path.join(ICI, 'serveur.py')], cwd=dossier(), env=env, **_detache())
+    for _ in range(30):                      # jusqu'à 3 secondes
+        time.sleep(0.1)
+        url = adresse()
+        if url:
+            evenement('dashboard', 'orchestrateur', 'Dashboard ouvert')
+            return url
+    return None
 
 
 def ouvrir(silencieux=False):
-    if vivant():
-        return 'déjà ouvert'
-    cmd = commande() + ['--saw', '--dossier', dossier()]
-    options = {'stdin': subprocess.DEVNULL, 'stdout': subprocess.DEVNULL, 'stderr': subprocess.DEVNULL, 'close_fds': True}
-    if os.name == 'nt':
-        options['creationflags'] = 0x00000008 | 0x00000200   # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
-    else:
-        options['start_new_session'] = True
-    subprocess.Popen(cmd, cwd=dossier(), **options)
-    evenement('dashboard', 'orchestrateur', 'Dashboard ouvert')
-    return 'ouvert'
+    """Appelé par le hook à chaque demande (silencieux) et par Claude (« mon OpenCrafts »)."""
+    app = app_demandee()
+    if app:
+        pid = lire_json(interne('dashboard.json'), {}).get('pid')
+        if not pid:
+            subprocess.Popen(app + ['--saw', '--dossier', dossier()], cwd=dossier(), **_detache())
+            evenement('dashboard', 'orchestrateur', 'Dashboard ouvert')
+        return "l'app de bureau"
+    return demarrer_serveur()
+
+
+def arreter():
+    info = lire_json(interne('serveur.json'), {})
+    pid = info.get('pid')
+    if not pid:
+        return False
+    try:
+        if os.name == 'nt':
+            subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True, timeout=5)
+        else:
+            os.kill(pid, 15)
+    except Exception:
+        return False
+    try:
+        os.remove(interne('serveur.json'))
+    except OSError:
+        pass
+    return True
 
 
 if __name__ == '__main__':
     action = sys.argv[1] if len(sys.argv) > 1 else 'ouvrir'
     if action == 'etat':
-        print('ouvert' if vivant() else 'fermé')
+        print(adresse() or 'arrêté')
+    elif action == 'arreter':
+        print('arrêté' if arreter() else 'il ne tournait pas')
     else:
-        try:
-            print('Dashboard :', ouvrir())
-        except Exception as e:
-            print(f"Dashboard non ouvert : {e}. L'OpenCrafts fonctionne quand même ; le dashboard se télécharge sur opencrafts.company.")
+        resultat = ouvrir()
+        if resultat and resultat.startswith('http'):
+            print(f'Dashboard : {resultat}')
+            print("Affiche cette adresse dans ton panneau navigateur, à droite de la conversation (outil "
+                  "preview_start avec cette url si tu l'as) ; sinon donne le lien à l'utilisateur.")
+        elif resultat:
+            print(f'Dashboard : {resultat}')
+        else:
+            print("Dashboard non ouvert : le serveur local n'a pas démarré. L'OpenCrafts fonctionne quand même ; "
+                  "python .claude/skills/opencrafts/scripts/instantane.py produit une version à publier dans la conversation.")

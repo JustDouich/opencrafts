@@ -21,6 +21,8 @@ LIBELLES = {
 
 def resume_outil(nom, entree):
     entree = entree or {}
+    if nom.startswith('mcp__'):                      # outils de connecteurs : « mcp__Navigateur__navigate » -> « navigate »
+        nom = nom.rsplit('__', 1)[-1].replace('_', ' ')
     cible = entree.get('file_path') or entree.get('url') or entree.get('pattern') or entree.get('query') or entree.get('command') or ''
     cible = os.path.basename(cible) if entree.get('file_path') else cible
     return f"{LIBELLES.get(nom, nom)} {cible}".strip()[:200]

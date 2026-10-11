@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'">
+<title>OpenCrafts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=JetBrains+Mono:wght@400;600&family=Inter+Tight:wght@400;500;600&display=swap">
+<style>
+/* Une seule colonne, calme : la constellation au centre, une phrase « maintenant », un fil court. */
+:root {
+  --bg: #100d0c; --panel: #181412; --panel-2: #211b18; --line: #2e2622; --fg: #f3ede6; --muted: #9a8f86;
+  --red: #e5383b; --apprenti: #8a817a; --ouvrier: #6aa6d8; --compagnon: #e5383b; --ecoute: #b48ae0; --ok: #6cc28a;
+  --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --mono: "JetBrains Mono", Consolas, monospace;
+  --body: "Inter Tight", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--body); overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
+header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.marque { font: 800 18px var(--display); letter-spacing: .06em; color: var(--red); }
+.nom { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.direct { display: inline-flex; align-items: center; gap: 6px; font: 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.direct i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(108,194,138,.6); animation: bat 2s infinite; }
+@keyframes bat { 70% { box-shadow: 0 0 0 7px rgba(108,194,138,0); } 100% { box-shadow: 0 0 0 0 rgba(108,194,138,0); } }
+.btn-ic { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 12px; color: var(--muted); }
+.btn-ic[aria-pressed="true"] { color: var(--fg); border-color: var(--muted); }
+
+main { position: relative; min-height: 0; }
+.vue { position: absolute; inset: 0; display: grid; grid-template-rows: 1fr auto; transition: opacity .35s ease, transform .45s ease; }
+.vue.cachee { opacity: 0; pointer-events: none; transform: scale(.97); }
+canvas { width: 100%; height: 100%; display: block; }
+.scene { position: relative; min-height: 0; }
+
+.maintenant { padding: 10px 18px 0; }
+.maintenant .lbl, .lbl { font: 11px var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.maintenant .phrase { font: 600 19px/1.3 var(--body); margin-top: 4px; min-height: 26px; transition: opacity .3s; }
+.maintenant .phrase b { color: var(--accent, var(--red)); font-weight: 600; }
+.fil { padding: 10px 18px 14px; display: grid; gap: 6px; max-height: 190px; overflow: hidden; }
+.ev { display: grid; grid-template-columns: 10px 124px 1fr; gap: 8px; align-items: baseline; font-size: 13px; color: var(--muted); animation: entre .4s ease both; }
+.ev i { width: 8px; height: 8px; border-radius: 50%; align-self: center; }
+.ev span:last-child { color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes entre { from { opacity: 0; transform: translateY(6px); } }
+footer { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px; border-top: 1px solid var(--line); }
+.puce { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+.puce b { color: var(--red); }
+
+/* À l'intérieur d'un agent */
+.interieur { grid-template-rows: auto 1fr; }
+.int-tete { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.retour { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; }
+.int-tete h1 { margin: 0; font: 800 26px var(--display); letter-spacing: .03em; }
+.niv { font: 11px var(--mono); padding: 3px 8px; border-radius: 999px; border: 1px solid; }
+.int-corps { min-height: 0; display: grid; grid-template-rows: minmax(200px, 42%) 1fr; }
+.onglets { display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+.onglets button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 9px 10px; color: var(--muted); }
+.onglets button[aria-selected="true"] { color: var(--fg); border-color: var(--accent, var(--red)); }
+.panneau { overflow-y: auto; padding: 14px 16px 24px; display: grid; gap: 12px; align-content: start; }
+.carte { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.carte h3 { margin: 0 0 6px; font: 600 14px var(--body); }
+.entree { display: grid; grid-template-columns: 84px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.entree:last-child { border: 0; }
+.entree span:first-child { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.vide { color: var(--muted); font-size: 13px; }
+
+/* Compta */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.kpi b { display: block; font: 600 20px var(--mono); margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi.neg b { color: var(--red); } .kpi.pos b { color: var(--ok); }
+form.saisie { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; align-items: end; }
+form.saisie label { display: grid; gap: 3px; font-size: 11px; color: var(--muted); min-width: 0; }
+form.saisie .l2 { grid-column: span 2; } form.saisie .l3 { grid-column: span 3; }
+input, select { width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; color: var(--fg); padding: 7px 8px; font: 13px var(--body); }
+.btn { background: var(--red); border: 0; border-radius: 8px; padding: 8px 12px; font-weight: 600; color: #fff; }
+.btn.sec { background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); font-weight: 500; }
+.barre-outils { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.table { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font: 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+td.m { text-align: right; } th.m { text-align: right; }
+td .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--panel-2); }
+td .rec { color: var(--ok); } td .dep { color: #f0a35e; }
+.suppr { background: none; border: 0; color: var(--muted); padding: 2px 6px; border-radius: 6px; }
+.suppr:hover { color: var(--red); }
+.confirmer { color: var(--red) !important; font-weight: 600; }
+
+/* Tableau de pilotage */
+.btn-pilotage { background: var(--red); color: #fff; border: 0; border-radius: 8px; padding: 5px 10px; font: 600 12px var(--mono); letter-spacing: .06em; }
+.btn-pilotage b { background: #fff; color: var(--red); border-radius: 999px; padding: 0 6px; margin-left: 6px; }
+.pilotage { grid-template-rows: auto 1fr; }
+.pil-tete { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.pil-tete h1 { margin: 0; font: 800 26px var(--display); letter-spacing: .04em; }
+.pil-corps { overflow-y: auto; padding: 14px 16px 30px; display: grid; gap: 16px; align-content: start; }
+.attentes { display: grid; gap: 10px; }
+.attente { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--red); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+.attente .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font: 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.attente .q { font-size: 15px; font-weight: 500; }
+.choix { display: flex; flex-wrap: wrap; gap: 6px; }
+.choix button { border: 1px solid var(--line); background: var(--panel-2); border-radius: 8px; padding: 6px 12px; font: 600 13px var(--body); }
+.choix button.prim { background: var(--red); border-color: var(--red); color: #fff; }
+.choix button:hover { border-color: var(--fg); }
+.agent-chip { display: inline-flex; align-items: center; gap: 5px; font: 11px var(--mono); padding: 2px 8px; border-radius: 999px; border: 1px solid; text-transform: none; letter-spacing: 0; }
+.statut { font: 11px var(--mono); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.statut.en-cours { background: #18331f; color: #6cc28a; } .statut.bloque { background: #3a1416; color: #ff8a8c; }
+.statut.a-trancher { background: #3a2a10; color: #f0b35a; } .statut.en-pause, .statut.pas-commence { background: #26211e; color: #b9ada3; }
+.statut.termine { background: #1d2a33; color: #8ec5ea; } .statut.abandonne { background: #222; color: #777; }
+.tab-chantiers { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.tab-chantiers table { min-width: 640px; }
+.tab-chantiers td { vertical-align: top; white-space: normal; }
+.tab-chantiers td.nom b { display: block; font-weight: 600; } .tab-chantiers td.nom span { color: var(--muted); font-size: 12px; }
+.barre-av { width: 70px; height: 6px; background: var(--panel-2); border-radius: 6px; overflow: hidden; margin-top: 4px; }
+.barre-av i { display: block; height: 100%; background: var(--red); }
+.reste { margin: 0; padding-left: 16px; color: var(--muted); font-size: 12px; }
+.actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.actions button { border: 1px solid var(--line); background: none; border-radius: 6px; padding: 3px 8px; font-size: 12px; color: var(--fg); }
+.actions button:hover { border-color: var(--red); color: #fff; }
+.vide-pil { color: var(--muted); padding: 10px 2px; }
+.flash { animation: flash .9s ease; } @keyframes flash { 0% { background: #3a1416; } }
+@media (max-width: 520px) { form.saisie { grid-template-columns: repeat(2, 1fr); } form.saisie .l2, form.saisie .l3 { grid-column: span 2; } .kpis { grid-template-columns: repeat(2, 1fr); } }
+/* Harnais du produit : toujours en vue, à côté du dashboard */
+.btn-harnais { position: relative; background: none; color: var(--fg); border: 1px solid #e8622c; border-radius: 8px; padding: 5px 10px; font: 600 12px var(--mono); letter-spacing: .06em; }
+.btn-harnais.actif { background: linear-gradient(135deg, #e8622c, #e5383b); border-color: transparent; color: #fff; box-shadow: 0 0 0 0 rgba(232,98,44,.55); animation: appel 3.2s ease-in-out infinite; }
+.btn-harnais .point { position: absolute; top: -4px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: #e8622c; animation: bat 2s infinite; }
+@keyframes appel { 50% { box-shadow: 0 0 0 6px rgba(232,98,44,0); } }
+.harnais-v { grid-template-rows: auto 1fr; }
+.champ { display: grid; gap: 6px; }
+.champ label { font: 11px var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+textarea { width: 100%; min-height: 130px; resize: vertical; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; color: var(--fg); padding: 10px 12px; font: 14px/1.5 var(--body); }
+.champ input { font-size: 15px; padding: 10px 12px; border-radius: 10px; }
+.precisions { display: grid; gap: 4px; }
+.niveaux { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.niveaux span { display: flex; justify-content: space-between; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; }
+.ok-msg { color: var(--ok); font-size: 13px; }
+/* Première ouverture : deux questions, rien d'autre */
+.accueil { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 20px; background: rgba(16,13,12,.72); backdrop-filter: blur(6px); }
+.accueil[hidden] { display: none; }
+.accueil .boite { width: min(520px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: grid; gap: 14px; box-shadow: 0 30px 60px -30px #000; animation: entre .4s ease both; }
+.accueil h2 { margin: 0; font: 800 30px/1.05 var(--display); letter-spacing: .02em; }
+.accueil p { margin: 0; color: var(--muted); }
+.accueil .etape { font: 11px var(--mono); color: #e8622c; letter-spacing: .12em; text-transform: uppercase; }
+.accueil .bas-boite { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.lien { background: none; border: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; padding: 6px 0; }
+/* Accueil : les chantiers en cours sous les actions */
+#vue-constellation { grid-template-rows: minmax(320px, 1fr) auto; }
+.bas { min-height: 0; max-height: 38vh; overflow-y: auto; }
+.ch-bloc { padding: 4px 18px 16px; display: grid; gap: 8px; }
+.ch { background: rgba(24,20,18,.82); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 7px; }
+.ch-tete { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ch-tete b { flex: 1; min-width: 140px; font-weight: 600; }
+.ch .barre-av { width: 100%; margin: 0; }
+.ch .q { font-size: 13px; }
+.ch .choix button, .ch .actions button { padding: 4px 10px; font-size: 12px; }
+.agent-chip[data-agent] { cursor: pointer; background: none; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* Téléphone (claude.ai, app mobile) */
+@media (max-width: 520px) {
+  header { gap: 8px; padding: 10px 12px; }
+  .direct { font-size: 10px; letter-spacing: .06em; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+  header > * { flex-shrink: 1; }
+  .ev span:last-child { white-space: normal; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <span class="marque">OPENCRAFTS</span>
+    <span class="nom" id="nom">Mon OpenCrafts</span>
+    <span class="direct"><i></i>en direct</span>
+    <button class="btn-harnais" id="ouvrir-harnais" title="Le harnais de votre produit : ce que tous les agents lisent">HARNAIS</button>
+    <button class="btn-pilotage" id="ouvrir-pilotage">PILOTAGE<b id="nb-attentes">0</b></button>
+    <button class="btn-ic" id="epingle" aria-pressed="true" title="Garder au premier plan">📌</button>
+  </header>
+
+  <main>
+    <section class="vue" id="vue-constellation">
+      <div class="scene"><canvas id="c-const" aria-label="Les dix agents"></canvas></div>
+      <div class="bas">
+        <div class="maintenant"><div class="lbl">Maintenant</div><div class="phrase" id="phrase">Vos agents attendent votre première demande.</div></div>
+        <div class="fil" id="fil"></div>
+        <div class="ch-bloc" id="ch-bloc"></div>
+      </div>
+    </section>
+
+    <section class="vue interieur cachee" id="vue-agent">
+      <div class="int-tete">
+        <button class="retour" id="retour">← Tous les agents</button>
+        <h1 id="a-nom"></h1><span class="niv" id="a-niv"></span>
+      </div>
+      <div class="int-corps">
+        <div class="scene"><canvas id="c-cerveau" aria-label="L'intérieur de l'agent"></canvas></div>
+        <div style="display:grid;grid-template-rows:auto 1fr;min-height:0">
+          <div class="onglets" role="tablist" id="onglets"></div>
+          <div class="panneau" id="panneau"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="vue harnais-v pilotage cachee" id="vue-harnais">
+      <div class="pil-tete"><button class="retour" id="retour-harnais">← Agents</button><h1>HARNAIS</h1><span class="lbl">Ce que tous vos agents lisent avant d'agir</span></div>
+      <div class="pil-corps" id="harnais-corps"></div>
+    </section>
+
+    <section class="vue pilotage cachee" id="vue-pilotage">
+      <div class="pil-tete"><button class="retour" id="retour-pil">← Agents</button><h1>PILOTAGE</h1><span class="lbl" id="pil-resume"></span></div>
+      <div class="pil-corps" id="pil-corps"></div>
+    </section>
+    <div class="accueil" id="accueil" hidden></div>
+  </main>
+
+  <footer id="pied"></footer>
+</div>
+
+<script>
+'use strict';
+const AGENTS = [
+  ['orchestrateur', 'Orchestrateur', 'Coordonne les agents et prépare votre point du jour.'],
+  ['contexte', 'Contexte', 'La mémoire : votre produit, votre marché, vos concurrents.'],
+  ['rd', 'R&D', 'Construit : site, outils, prototypes.'],
+  ['comptable', 'Comptable', 'Tient vos comptes, la TVA, vos prix.'],
+  ['juridique', 'Juridique', 'Contrats, CGV, RGPD, marque.'],
+  ['rh', 'RH', 'Compétences, freelances, organisation.'],
+  ['pivot', 'Pivot', 'Repère quand il faut changer de cap.'],
+  ['distribution', 'Commercial', 'Trouve clients et revendeurs, prépare les mails.'],
+  ['marketing', 'Marketing', 'Posts, campagnes, image de marque.'],
+  ['innovation', 'Innovation', 'Veille et idées. Propose, n’exécute jamais.'],
+];
+const NOM = Object.fromEntries(AGENTS.map(a => [a[0], a[1]]));
+const SIGLE = { orchestrateur: 'ORC', contexte: 'CTX', rd: 'R&D', comptable: 'CPT', juridique: 'JUR', rh: 'RH', pivot: 'PIV', distribution: 'VTE', marketing: 'MKT', innovation: 'INN' };
+const COULEUR_NIV = { APPRENTI: '#8a817a', OUVRIER: '#6aa6d8', COMPAGNON: '#e5383b', 'ÉCOUTE': '#b48ae0' };
+const SENS_NIV = {
+  APPRENTI: 'Il ne fait rien seul. Il prépare, vous lancez.',
+  OUVRIER: 'Il fait ses gestes courants. Il n’engage rien vers l’extérieur.',
+  COMPAGNON: 'Il engage, dans une limite écrite.',
+  'ÉCOUTE': 'Il propose, il n’exécute jamais. Verrouillé.',
+};
+const VERBE = { demande: 'reçoit votre demande', outil: '', fait: '', agent: '', journal: 'note', compta: '', lecture: '', fin: 'a terminé', installation: '', 'agent-pret': 'est prêt', dashboard: '' };
+let E = null;                       // état complet lu dans le dossier
+const activite = {};                // agent -> { t, texte } dernière activité
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const niveau = (id) => (E && E.harnais && E.harnais.niveaux && E.harnais.niveaux[id]) || 'APPRENTI';
+const couleur = (id) => COULEUR_NIV[niveau(id)] || '#8a817a';
+const heure = (t) => new Date(t * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+// ---------------- Constellation ----------------
+const cc = $('c-const'), gc = cc.getContext('2d');
+let W = 0, H = 0, DPR = 1, noeuds = [], survol = null, pulses = [];
+function dimensionner(canvas) {
+  DPR = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  canvas.width = Math.max(1, r.width * DPR); canvas.height = Math.max(1, r.height * DPR);
+  return [r.width, r.height];
+}
+function placer() {
+  [W, H] = dimensionner(cc);
+  const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.36;
+  noeuds = AGENTS.map(([id], i) => {
+    if (id === 'orchestrateur') return { id, x: cx, y: cy, r: 30 };
+    const k = i - 1, a = -Math.PI / 2 + k * (2 * Math.PI / 9);
+    return { id, x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R, r: 23 };
+  });
+}
+// Texture vivante : des nappes de couleur qui dérivent lentement, une membrane qui respire, un grain fin.
+// Peu coûteux (quelques dégradés par image), et figé si l'utilisateur préfère moins d'animations.
+const CALME = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const NAPPES = [['#e5383b', .12, 0.31, 0.7], ['#6aa6d8', .085, 0.23, 1.9], ['#b48ae0', .085, 0.17, 3.4], ['#e8622c', .1, 0.27, 4.6], ['#6cc28a', .055, 0.19, 5.8]];
+const grain = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 160;
+  const g = c.getContext('2d'), img = g.createImageData(160, 160);
+  for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 20; }
+  g.putImageData(img, 0, 0); return c;
+})();
+let motifGrain = null;
+function dessinerTexture(t) {
+  const tt = CALME ? 0 : t, m = Math.min(W, H);
+  gc.globalCompositeOperation = 'lighter';
+  for (const [c, a, v, ph] of NAPPES) {
+    const x = W / 2 + Math.cos(tt * v * 0.35 + ph) * W * 0.32, y = H / 2 + Math.sin(tt * v * 0.5 + ph * 1.3) * H * 0.3;
+    const r = Math.max(W, H) * (0.45 + 0.08 * Math.sin(tt * v + ph));
+    const g = gc.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, c + Math.round(a * 255).toString(16).padStart(2, '0')); g.addColorStop(1, c + '00');
+    gc.fillStyle = g; gc.fillRect(0, 0, W, H);
+  }
+  gc.globalCompositeOperation = 'source-over';
+  // membrane : trois contours souples autour du centre, comme une cellule vue de près
+  for (let k = 0; k < 3; k++) {
+    gc.beginPath();
+    for (let i = 0; i <= 90; i++) {
+      const a = i / 90 * Math.PI * 2, R = m * (0.47 + k * 0.035) * (1 + 0.035 * Math.sin(a * (3 + k) + tt * (0.4 + k * 0.15)) + 0.02 * Math.sin(a * 7 - tt * 0.7));
+      const x = W / 2 + Math.cos(a) * R, y = H / 2 + Math.sin(a) * R * 0.92;
+      i ? gc.lineTo(x, y) : gc.moveTo(x, y);
+    }
+    gc.strokeStyle = `rgba(243,237,230,${0.035 - k * 0.008})`; gc.lineWidth = 1; gc.stroke();
+  }
+  if (!motifGrain) motifGrain = gc.createPattern(grain, 'repeat');
+  gc.save(); gc.translate((tt * 7) % 160, (tt * 4) % 160); gc.fillStyle = motifGrain; gc.fillRect(-160, -160, W + 320, H + 320); gc.restore();
+}
+function dessinerConstellation(t) {
+  gc.setTransform(DPR, 0, 0, DPR, 0, 0);
+  gc.clearRect(0, 0, W, H);
+  dessinerTexture(t);
+  const centre = noeuds[0];
+  // liens
+  for (const n of noeuds.slice(1)) {
+    gc.strokeStyle = 'rgba(243,237,230,0.07)'; gc.lineWidth = 1;
+    gc.beginPath(); gc.moveTo(centre.x, centre.y); gc.lineTo(n.x, n.y); gc.stroke();
+  }
+  // impulsions : une lueur voyage du centre vers l'agent qui travaille
+  pulses = pulses.filter(p => t - p.t0 < 1.2);
+  for (const p of pulses) {
+    const n = noeuds.find(m => m.id === p.id); if (!n || n === centre) continue;
+    const k = (t - p.t0) / 1.2, x = centre.x + (n.x - centre.x) * k, y = centre.y + (n.y - centre.y) * k;
+    const g = gc.createRadialGradient(x, y, 0, x, y, 14); g.addColorStop(0, p.c); g.addColorStop(1, 'rgba(0,0,0,0)');
+    gc.fillStyle = g; gc.beginPath(); gc.arc(x, y, 14, 0, 7); gc.fill();
+  }
+  // agents
+  for (const n of noeuds) {
+    const a = activite[n.id], age = a ? (Date.now() / 1000 - a.t) : 99;
+    const actif = age < 6, c = couleur(n.id);
+    const souffle = 1 + Math.sin(t * 1.6 + n.x * 0.01) * 0.035;
+    const r = n.r * souffle * (actif ? 1 + Math.max(0, 1 - age / 1.5) * 0.25 : 1);
+    if (actif) {
+      const halo = gc.createRadialGradient(n.x, n.y, r * 0.6, n.x, n.y, r * 2.8);
+      halo.addColorStop(0, c + 'aa'); halo.addColorStop(1, c + '00');
+      gc.fillStyle = halo; gc.beginPath(); gc.arc(n.x, n.y, r * 2.8, 0, 7); gc.fill();
+    }
+    gc.fillStyle = survol === n.id ? '#2a221f' : '#1c1715';
+    gc.beginPath(); gc.arc(n.x, n.y, r, 0, 7); gc.fill();
+    gc.strokeStyle = c; gc.lineWidth = actif ? 3 : 1.6;
+    gc.beginPath(); gc.arc(n.x, n.y, r, 0, 7); gc.stroke();
+    const nAtt = compteAgent(n.id);
+    if (nAtt) { gc.fillStyle = '#e5383b'; gc.beginPath(); gc.arc(n.x + r * 0.75, n.y - r * 0.75, 9, 0, 7); gc.fill(); gc.fillStyle = '#fff'; gc.font = '700 10px "JetBrains Mono", monospace'; gc.textAlign = 'center'; gc.textBaseline = 'middle'; gc.fillText(String(nAtt), n.x + r * 0.75, n.y - r * 0.75 + 0.5); }
+    gc.fillStyle = '#f3ede6'; gc.font = `600 ${n.id === 'orchestrateur' ? 12 : 11}px "Inter Tight", system-ui`; gc.textAlign = 'center'; gc.textBaseline = 'middle';
+    gc.fillText(SIGLE[n.id], n.x, n.y);
+    gc.fillStyle = actif ? '#f3ede6' : '#9a8f86'; gc.font = '500 12px "Inter Tight", system-ui';
+    gc.fillText(NOM[n.id], n.x, n.y + r + 13);
+    if (actif && a.texte) {
+      gc.fillStyle = c; gc.font = '11px "JetBrains Mono", monospace';
+      const txt = a.texte.length > 30 ? a.texte.slice(0, 29) + '…' : a.texte;
+      gc.fillText(txt, n.x, n.y + r + 28);
+    }
+  }
+}
+cc.addEventListener('mousemove', (e) => {
+  const r = cc.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const n = noeuds.find(m => Math.hypot(m.x - x, m.y - y) < m.r + 8);
+  survol = n ? n.id : null; cc.style.cursor = n ? 'pointer' : 'default';
+});
+cc.addEventListener('click', (e) => {
+  const r = cc.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const n = noeuds.find(m => Math.hypot(m.x - x, m.y - y) < m.r + 14);
+  if (n) ouvrirAgent(n.id);
+});
+
+// ---------------- Événements en direct ----------------
+function phraseEvenement(ev) {
+  const nom = NOM[ev.agent] || 'Orchestrateur';
+  const v = VERBE[ev.type];
+  if (ev.type === 'demande') return `<b>${esc(nom)}</b> ${v} : « ${esc(ev.texte.slice(0, 90))} »`;
+  return `<b>${esc(nom)}</b> ${esc(v || '')} ${esc(ev.texte)}`.replace(/\s+/g, ' ');
+}
+function recevoir(evs, rejouer) {
+  const nt = performance.now() / 1000;
+  for (const ev of evs) {
+    if (!ev || !ev.agent) continue;
+    activite[ev.agent] = { t: rejouer ? 0 : (Date.now() / 1000), texte: ev.type === 'demande' ? 'votre demande' : ev.texte };
+    if (!rejouer) pulses.push({ id: ev.agent, t0: nt, c: couleur(ev.agent) });
+  }
+  const derniers = evs.filter(e => e && e.type !== 'agent-pret').slice(-1)[0];
+  if (derniers && !rejouer) {
+    const p = $('phrase'); p.style.setProperty('--accent', couleur(derniers.agent)); p.innerHTML = phraseEvenement(derniers);
+  }
+  fil.push(...evs.filter(e => e && e.type !== 'agent-pret' && e.type !== 'outil')); fil = fil.slice(-6);
+  $('fil').innerHTML = fil.slice().reverse().map(ev => `<div class="ev"><i style="background:${couleur(ev.agent)}"></i><span>${heure(ev.t)} · ${esc(NOM[ev.agent] || '')}</span><span>${esc(ev.type === 'demande' ? '« ' + ev.texte + ' »' : ev.texte)}</span></div>`).join('');
+  if (agentOuvert) { for (const ev of evs) if (ev.agent === agentOuvert && !rejouer) etincelle(ev.texte); }
+}
+let fil = [];
+
+// ---------------- État des fichiers ----------------
+function appliquerEtat(etat) {
+  E = etat;
+  const nom = (etat.harnais_produit && etat.harnais_produit.nom) || (etat.etat && etat.etat.nom) || (etat.produit && (etat.produit.produit?.marque || etat.produit.site)) || 'Mon OpenCrafts';
+  $('nom').textContent = nom;
+  const puces = [];
+  if (etat.produit) puces.push(`<span class="puce">Produit : ${esc(etat.produit.titre || etat.produit.url)}</span>`);
+  if (etat.mission && etat.mission !== 'À préciser.') puces.push(`<span class="puce">${esc(etat.mission.slice(0, 70))}</span>`);
+  $('pied').innerHTML = puces.join('');
+  majCompteur();
+  rendreChantiersAccueil();
+  majBoutonHarnais();
+  if (!$('vue-harnais').classList.contains('cachee') && !document.activeElement.closest('#harnais-corps')) rendreHarnais();
+  premiereOuverture();
+  if (!$('vue-pilotage').classList.contains('cachee')) rendrePilotage();
+  if (agentOuvert) remplirAgent(agentOuvert, true);
+}
+
+// ---------------- À l'intérieur d'un agent ----------------
+const cb = $('c-cerveau'), gb = cb.getContext('2d');
+let agentOuvert = null, ongletOuvert = 'contexte', neurones = [], pensees = [], etincelles = [], BW = 0, BH = 0;
+function ouvrirAgent(id) {
+  agentOuvert = id; ongletOuvert = id === 'comptable' ? 'compta' : 'contexte';
+  $('vue-constellation').classList.add('cachee'); $('vue-agent').classList.remove('cachee');
+  document.documentElement.style.setProperty('--accent', couleur(id));
+  remplirAgent(id);
+  requestAnimationFrame(() => { [BW, BH] = dimensionner(cb); semer(); });
+}
+function fermerAgent() {
+  agentOuvert = null; $('vue-agent').classList.add('cachee'); $('vue-constellation').classList.remove('cachee');
+}
+$('retour').onclick = fermerAgent;
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && agentOuvert) fermerAgent(); });
+
+function entreesAgent(id) {
+  if (!E) return [];
+  const cle = Object.keys(E.journal.sections).find(k => k.startsWith('Agent ') && k.includes(NOM[id] === 'Commercial' ? 'Distribution' : NOM[id] === 'R&D' ? 'R&D' : NOM[id]));
+  return cle ? E.journal.sections[cle] : [];
+}
+function semer() {
+  const c = couleur(agentOuvert);
+  neurones = Array.from({ length: 70 }, (_, i) => ({ a: Math.random() * 7, d: 0.15 + Math.random() * 0.8, v: (Math.random() - 0.5) * 0.12, s: 1 + Math.random() * 2 }));
+  const items = [`Niveau ${niveau(agentOuvert)}`, ...entreesAgent(agentOuvert).slice(0, 5).map(e => e.texte)];
+  const a = activite[agentOuvert]; if (a && a.texte) items.unshift('En cours : ' + a.texte);
+  pensees = items.slice(0, 6).map((txt, i) => ({ txt: txt.length > 42 ? txt.slice(0, 41) + '…' : txt, a: -Math.PI / 2 + i * (2 * Math.PI / Math.max(3, items.length)), d: 0.62, c }));
+}
+function etincelle(txt) {
+  etincelles.push({ t0: performance.now() / 1000, a: Math.random() * 7 });
+  if (txt) { pensees.unshift({ txt: txt.length > 42 ? txt.slice(0, 41) + '…' : txt, a: Math.random() * 7, d: 0.62, c: couleur(agentOuvert), neuf: performance.now() / 1000 }); pensees = pensees.slice(0, 7); }
+}
+function dessinerCerveau(t) {
+  if (!agentOuvert) return;
+  gb.setTransform(DPR, 0, 0, DPR, 0, 0); gb.clearRect(0, 0, BW, BH);
+  const cx = BW / 2, cy = BH / 2, R = Math.min(BW, BH) * 0.46, c = couleur(agentOuvert);
+  // membrane organique
+  gb.beginPath();
+  for (let i = 0; i <= 64; i++) {
+    const a = i / 64 * Math.PI * 2, w = 1 + 0.05 * Math.sin(a * 3 + t * 0.8) + 0.035 * Math.sin(a * 5 - t * 1.1);
+    const x = cx + Math.cos(a) * R * w * 1.25, y = cy + Math.sin(a) * R * w * 0.82;
+    i ? gb.lineTo(x, y) : gb.moveTo(x, y);
+  }
+  const fond = gb.createRadialGradient(cx, cy, 0, cx, cy, R * 1.3);
+  fond.addColorStop(0, c + '30'); fond.addColorStop(1, c + '05');
+  gb.fillStyle = fond; gb.fill(); gb.strokeStyle = c + '55'; gb.lineWidth = 1.2; gb.stroke();
+  // neurones et synapses
+  const pts = neurones.map(n => { n.a += n.v * 0.016; const w = n.d; return [cx + Math.cos(n.a) * R * 1.15 * w, cy + Math.sin(n.a * 1.3) * R * 0.75 * w, n.s]; });
+  gb.strokeStyle = c + '22'; gb.lineWidth = 0.7;
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j += 3) {
+    const dx = pts[i][0] - pts[j][0], dy = pts[i][1] - pts[j][1];
+    if (dx * dx + dy * dy < 2600) { gb.beginPath(); gb.moveTo(pts[i][0], pts[i][1]); gb.lineTo(pts[j][0], pts[j][1]); gb.stroke(); }
+  }
+  const nt = performance.now() / 1000;
+  etincelles = etincelles.filter(e => nt - e.t0 < 1.5);
+  for (const [x, y, s] of pts) {
+    let lum = 0.35;
+    for (const e of etincelles) { const k = (nt - e.t0) / 1.5, rr = k * R * 1.4, d = Math.hypot(x - cx, y - cy); if (Math.abs(d - rr) < 18) lum = 1; }
+    gb.fillStyle = lum > 0.5 ? '#fff' : c; gb.globalAlpha = lum; gb.beginPath(); gb.arc(x, y, s, 0, 7); gb.fill(); gb.globalAlpha = 1;
+  }
+  // cœur et pensées (contexte réel de l'agent)
+  const cœur = gb.createRadialGradient(cx, cy, 0, cx, cy, 26); cœur.addColorStop(0, '#fff'); cœur.addColorStop(0.3, c); cœur.addColorStop(1, c + '00');
+  gb.fillStyle = cœur; gb.beginPath(); gb.arc(cx, cy, 26 + Math.sin(t * 2) * 2, 0, 7); gb.fill();
+  gb.font = '12px "Inter Tight", system-ui'; gb.textBaseline = 'middle';
+  pensees.forEach((p, i) => {
+    const a = p.a + Math.sin(t * 0.3 + i) * 0.06, x = cx + Math.cos(a) * R * 1.05 * p.d * 1.25, y = cy + Math.sin(a) * R * 0.82 * p.d;
+    gb.strokeStyle = c + '55'; gb.beginPath(); gb.moveTo(cx, cy); gb.lineTo(x, y); gb.stroke();
+    const neuf = p.neuf && nt - p.neuf < 3;
+    gb.fillStyle = neuf ? '#fff' : c; gb.beginPath(); gb.arc(x, y, neuf ? 5 : 3.5, 0, 7); gb.fill();
+    gb.fillStyle = neuf ? '#fff' : '#d9d0c8'; gb.textAlign = x < cx ? 'right' : 'left';
+    gb.fillText(p.txt, x + (x < cx ? -9 : 9), y);
+  });
+}
+
+function remplirAgent(id, rafraichir) {
+  const info = AGENTS.find(a => a[0] === id);
+  $('a-nom').textContent = info[1];
+  const nv = niveau(id); const el = $('a-niv'); el.textContent = nv; el.style.color = couleur(id); el.style.borderColor = couleur(id);
+  const onglets = id === 'comptable' ? [['compta', 'Outil de compta'], ['contexte', 'Contexte']] : [['contexte', 'Contexte'], ['tableau', 'Son tableau']];
+  $('onglets').innerHTML = onglets.map(([k, l]) => `<button role="tab" aria-selected="${k === ongletOuvert}" data-o="${k}">${l}</button>`).join('');
+  $('onglets').querySelectorAll('button').forEach(b => b.onclick = () => { ongletOuvert = b.dataset.o; remplirAgent(id); });
+  if (ongletOuvert === 'compta') { if (!rafraichir || !document.activeElement.closest('form')) rendreCompta(); return; }
+  const entrees = entreesAgent(id);
+  const plafond = E && E.harnais ? (E.harnais.plafonds_euros_par_mois || {})[id] ?? 0 : 0;
+  if (ongletOuvert === 'contexte') {
+    const sesAttentes = attentes().filter(x => x.agent === id);
+    $('panneau').innerHTML = (sesAttentes.length ? `<div><span class="lbl">Il attend votre décision</span><div class="attentes" style="margin-top:8px">${sesAttentes.map(carteAttente).join('')}</div></div>` : '') + `
+      <div class="carte"><h3>Son rôle</h3><div>${esc(info[2])}</div></div>
+      <div class="carte"><h3>Son harnais : ${esc(nv)}</h3><div>${esc(SENS_NIV[nv] || '')}</div><div class="vide" style="margin-top:6px">Plafond de dépense : ${plafond} € par mois. Rien ne sort (mail, post, paiement, contrat) sans votre oui.</div></div>
+      <div class="carte"><h3>Ce qu'il a fait</h3>${entrees.length ? entrees.slice(0, 12).map(e => `<div class="entree"><span>${esc(e.date)}</span><span>${esc(e.texte)}</span></div>`).join('') : '<div class="vide">Rien encore. Demandez-lui quelque chose dans Claude.</div>'}</div>`;
+    brancherDecisions($('panneau'));
+  } else {
+    const evs = fil.filter(e => e.agent === id);
+    $('panneau').innerHTML = `
+      <div class="carte"><h3>En ce moment</h3>${evs.length ? evs.slice().reverse().map(e => `<div class="entree"><span>${heure(e.t)}</span><span>${esc(e.texte)}</span></div>`).join('') : '<div class="vide">Il attend une demande.</div>'}</div>
+      <div class="carte"><h3>Ses outils</h3><div class="vide">Le tableau propre à cet agent arrive : l'outil de compta du Comptable est le premier.</div></div>`;
+  }
+}
+
+// ---------------- Outil de compta ----------------
+let filtreMois = 'tous', aSupprimer = null;
+const euros = (n) => (n || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+const ar = (x) => Math.round((x + 1e-9) * 100) / 100;
+function moisDe(d) { const [j, m, a] = d.split('/'); return `${m}/${a}`; }
+function rendreCompta() {
+  const compta = (E && E.compta) || { ecritures: [] };
+  const toutes = compta.ecritures || [];
+  const mois = [...new Set(toutes.map(e => moisDe(e.date)))].sort((x, y) => (y.slice(3) + y.slice(0, 2)).localeCompare(x.slice(3) + x.slice(0, 2)));
+  const ec = toutes.filter(e => filtreMois === 'tous' || moisDe(e.date) === filtreMois)
+    .sort((x, y) => (y.date.slice(6) + y.date.slice(3, 5) + y.date.slice(0, 2)).localeCompare(x.date.slice(6) + x.date.slice(3, 5) + x.date.slice(0, 2)));
+  const s = { r: 0, d: 0, tc: 0, td: 0 };
+  ec.forEach(e => { if (e.type === 'recette') { s.r += e.ht; s.tc += e.tva; } else { s.d += e.ht; s.td += e.tva; } });
+  const res = ar(s.r - s.d), tva = ar(s.tc - s.td);
+  const auj = new Date().toLocaleDateString('fr-FR');
+  $('panneau').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><span class="lbl">Recettes HT</span><b>${euros(s.r)}</b></div>
+      <div class="kpi"><span class="lbl">Dépenses HT</span><b>${euros(s.d)}</b></div>
+      <div class="kpi ${res < 0 ? 'neg' : 'pos'}"><span class="lbl">Résultat HT</span><b>${euros(res)}</b></div>
+      <div class="kpi"><span class="lbl">TVA collectée</span><b>${euros(s.tc)}</b></div>
+      <div class="kpi"><span class="lbl">TVA déductible</span><b>${euros(s.td)}</b></div>
+      <div class="kpi ${tva > 0 ? 'neg' : ''}"><span class="lbl">TVA à payer</span><b>${euros(tva)}</b></div>
+    </div>
+    <form class="saisie carte" id="f-compta">
+      <label>Type<select id="f-type"><option value="recette">Recette</option><option value="depense">Dépense</option></select></label>
+      <label>Date<input id="f-date" value="${auj}" pattern="\\d{2}/\\d{2}/\\d{4}" required></label>
+      <label class="l2">Libellé<input id="f-lib" required placeholder="Vente, fournisseur…"></label>
+      <label class="l2">Catégorie<input id="f-cat" list="cats" placeholder="Ventes, Achats, Pub…"></label>
+      <label>Montant<input id="f-mt" type="number" step="0.01" min="0" required></label>
+      <label>Saisi en<select id="f-base"><option value="ht">HT</option><option value="ttc">TTC</option></select></label>
+      <label>TVA %<select id="f-tva"><option>20</option><option>10</option><option>5.5</option><option>2.1</option><option>0</option></select></label>
+      <label class="l2">Moyen<input id="f-moyen" placeholder="carte, virement…"></label>
+      <button class="btn" type="submit" style="grid-column: span 1">Ajouter</button>
+      <datalist id="cats"><option>Ventes</option><option>Achats</option><option>Publicité</option><option>Logiciels</option><option>Transport</option><option>Frais bancaires</option></datalist>
+    </form>
+    <div class="barre-outils">
+      <label class="lbl" for="f-mois">Mois</label>
+      <select id="f-mois" style="width:auto"><option value="tous">Tous</option>${mois.map(m => `<option ${m === filtreMois ? 'selected' : ''}>${m}</option>`).join('')}</select>
+      <span style="flex:1"></span>
+      <button class="btn sec" id="f-csv">Exporter en CSV</button>
+      <button class="btn sec" id="f-fichier">Ouvrir le fichier</button>
+    </div>
+    <div class="table carte" style="padding:4px 8px">
+      ${ec.length ? `<table><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th class="m">HT</th><th class="m">TVA</th><th class="m">TTC</th><th></th></tr></thead><tbody>
+      ${ec.map(e => `<tr><td>${esc(e.date)}</td><td><span class="${e.type === 'recette' ? 'rec' : 'dep'}">${e.type === 'recette' ? '+' : '−'}</span> ${esc(e.libelle)}</td><td><span class="tag">${esc(e.categorie)}</span></td><td class="m">${euros(e.ht)}</td><td class="m">${euros(e.tva)}</td><td class="m">${euros(e.ttc)}</td><td><button class="suppr ${aSupprimer === e.id ? 'confirmer' : ''}" data-id="${e.id}" title="Supprimer cette écriture">${aSupprimer === e.id ? 'Confirmer' : '✕'}</button></td></tr>`).join('')}
+      </tbody></table>` : '<div class="vide" style="padding:10px">Aucune écriture. Ajoutez-en une ci-dessus, ou demandez au Comptable dans Claude.</div>'}
+    </div>`;
+  $('f-compta').onsubmit = (ev) => {
+    ev.preventDefault();
+    const mt = parseFloat($('f-mt').value || '0'), taux = parseFloat($('f-tva').value), ttc = $('f-base').value === 'ttc';
+    const ht = ttc ? mt / (1 + taux / 100) : mt;
+    const e = { id: Math.random().toString(16).slice(2, 12), date: $('f-date').value, type: $('f-type').value, libelle: $('f-lib').value.trim(),
+      categorie: $('f-cat').value.trim() || ($('f-type').value === 'recette' ? 'Ventes' : 'Achats'), moyen: $('f-moyen').value.trim(),
+      ht: ar(ht), tva_taux: taux, tva: ar(ht * taux / 100), ttc: ar(ht * (1 + taux / 100)), source: 'dashboard' };
+    const compta = { ...(E.compta || {}), ecritures: [...((E.compta || {}).ecritures || []), e] };
+    E.compta = compta; window.saw.ecrireCompta(compta); rendreCompta();
+  };
+  $('f-mois').onchange = (ev) => { filtreMois = ev.target.value; rendreCompta(); };
+  $('f-fichier').onclick = () => window.saw.ouvrir('comptabilite.json');
+  $('f-csv').onclick = () => {
+    const lignes = [['Date', 'Type', 'Libellé', 'Catégorie', 'Moyen', 'HT', 'Taux TVA', 'TVA', 'TTC'], ...ec.map(e => [e.date, e.type, e.libelle, e.categorie, e.moyen, e.ht, e.tva_taux, e.tva, e.ttc])];
+    const csv = '﻿' + lignes.map(l => l.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `comptabilite-${filtreMois === 'tous' ? 'tout' : filtreMois.replace('/', '-')}.csv`; a.click();
+  };
+  $('panneau').querySelectorAll('.suppr').forEach(b => b.onclick = () => {
+    if (aSupprimer !== b.dataset.id) { aSupprimer = b.dataset.id; rendreCompta(); return; }
+    const compta = { ...E.compta, ecritures: E.compta.ecritures.filter(e => e.id !== aSupprimer) };
+    aSupprimer = null; E.compta = compta; window.saw.ecrireCompta(compta); rendreCompta();
+  });
+}
+
+// ---------------- Tableau de pilotage ----------------
+// Tout ce qui attend une décision de l'utilisateur, visible ici (jamais seulement dans la conversation) :
+// les décisions inscrites dans chantiers.json par les agents, et la file d'arbitrage de JOURNAL.md.
+const AGENT_PAR_MOT = [['comptable', 'comptable'], ['juridique', 'juridique'], ['rh', 'rh'], ['commercial', 'distribution'], ['distribution', 'distribution'], ['marketing', 'marketing'], ['r&d', 'rd'], ['contexte', 'contexte'], ['pivot', 'pivot'], ['innovation', 'innovation'], ['orchestrateur', 'orchestrateur']];
+function agentDe(texte) { const t = (texte || '').toLowerCase(); const m = AGENT_PAR_MOT.find(([mot]) => t.startsWith(mot)); return m ? m[1] : 'orchestrateur'; }
+function attentes() {
+  if (!E) return [];
+  const liste = [];
+  for (const c of (E.chantiers && E.chantiers.chantiers) || []) {
+    for (const d of c.decisions || []) if (d.statut === 'en-attente') liste.push({ kind: 'decision', c, d, agent: NOM[c.agent] ? c.agent : 'orchestrateur' });
+  }
+  for (const a of (E.journal.arbitrage || []).filter(a => a.statut === 'EN ATTENTE')) liste.push({ kind: 'arbitrage', a, agent: agentDe(a.texte) });
+  return liste;
+}
+function compteAgent(id) { return attentes().filter(x => x.agent === id).length; }
+function carteAttente(x) {
+  const ag = x.agent, col = couleur(ag);
+  if (x.kind === 'arbitrage') {
+    return `<div class="attente"><div class="meta"><span class="agent-chip" style="color:${col};border-color:${col}">${esc(NOM[ag])}</span>File d'arbitrage</div><div class="q">${esc(x.a.texte)}</div>
+      <div class="choix">${[['OUI', 'Oui'], ['NON', 'Non'], ['PLUS TARD', 'Plus tard']].map(([r, l], i) => `<button class="${i === 0 ? 'prim' : ''}" data-arb="${esc(x.a.texte)}" data-rep="${r}">${l}</button>`).join('')}</div></div>`;
+  }
+  const opts = (x.d.options && x.d.options.length) ? x.d.options : ['Oui', 'Non', 'Plus tard'];
+  return `<div class="attente"><div class="meta"><span class="agent-chip" style="color:${col};border-color:${col}">${esc(NOM[ag])}</span>${esc(x.c.nom)}${x.d.depuis ? ' · depuis le ' + esc(x.d.depuis) : ''}</div><div class="q">${esc(x.d.question)}</div>
+    <div class="choix">${opts.map((o, i) => `<button class="${i === 0 ? 'prim' : ''}" data-ch="${esc(x.c.id)}" data-dec="${esc(x.d.id)}" data-rep="${esc(o)}">${esc(o)}</button>`).join('')}</div></div>`;
+}
+const LIB_STATUT = { 'en-cours': 'En cours', 'bloque': 'Bloqué', 'a-trancher': 'À trancher', 'en-pause': 'En pause', 'pas-commence': 'Pas commencé', 'termine': 'Terminé', 'abandonne': 'Abandonné' };
+const RANG_STATUT = { 'bloque': 0, 'a-trancher': 1, 'en-cours': 2, 'en-pause': 3, 'pas-commence': 4, 'termine': 5, 'abandonne': 6 };
+function ligneChantier(c) {
+  const ag = NOM[c.agent] ? c.agent : 'orchestrateur', col = couleur(ag), av = Math.max(0, Math.min(100, +c.avancement || 0));
+  const nDec = (c.decisions || []).filter(d => d.statut === 'en-attente').length;
+  const actions = ['termine', 'abandonne'].includes(c.statut) ? [] : (['bloque', 'a-trancher', 'en-pause', 'pas-commence'].includes(c.statut) ? [['debloquer', 'Débloquer'], ['continuer', 'Continuer']] : [['continuer', 'Continuer'], ['pause', 'Pause']]);
+  return `<tr><td class="nom"><b>${esc(c.nom)}</b><span>${esc((c.resume || '').slice(0, 120))}</span></td>
+    <td><span class="agent-chip" style="color:${col};border-color:${col}">${esc(NOM[ag])}</span></td>
+    <td><span class="statut ${esc(c.statut)}">${esc(LIB_STATUT[c.statut] || c.statut || '')}</span>${nDec ? `<div style="font-size:11px;color:var(--red);margin-top:4px">${nDec} décision${nDec > 1 ? 's' : ''} en attente</div>` : ''}</td>
+    <td>${av} %<div class="barre-av"><i style="width:${av}%"></i></div></td>
+    <td>${(c.reste || []).length ? `<ul class="reste">${c.reste.slice(0, 3).map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : '<span class="vide">—</span>'}</td>
+    <td><div class="actions">${actions.map(([a, l]) => `<button data-act="${a}" data-ch="${esc(c.id)}">${l}</button>`).join('')}</div></td></tr>`;
+}
+function rendrePilotage() {
+  const at = attentes();
+  const chantiers = ((E && E.chantiers && E.chantiers.chantiers) || []).slice().sort((a, b) => (RANG_STATUT[a.statut] ?? 3) - (RANG_STATUT[b.statut] ?? 3));
+  $('pil-resume').textContent = `${at.length} décision${at.length > 1 ? 's' : ''} en attente · ${chantiers.length} chantier${chantiers.length > 1 ? 's' : ''}`;
+  $('pil-corps').innerHTML = `
+    <div><span class="lbl">Ce qui attend votre décision</span><div class="attentes" style="margin-top:8px">${at.length ? at.map(carteAttente).join('') : '<div class="vide-pil">Rien n’attend votre décision. Tout ce qu’un agent vous demande apparaîtra ici.</div>'}</div></div>
+    <div><span class="lbl">Tous les chantiers</span><div class="tab-chantiers" style="margin-top:8px">${chantiers.length ? `<table><thead><tr><th>Chantier</th><th>Agent</th><th>Statut</th><th>Avancement</th><th>Ce qui reste</th><th>Décider</th></tr></thead><tbody>${chantiers.map(ligneChantier).join('')}</tbody></table>` : '<div class="vide-pil" style="padding:12px">Aucun chantier pour l’instant. Les agents les ajoutent ici quand ils démarrent un travail.</div>'}</div></div>`;
+  brancherDecisions($('pil-corps'));
+}
+function brancherDecisions(racine) {
+  racine.querySelectorAll('[data-dec]').forEach(b => b.onclick = async () => { b.closest('.attente, .ch')?.classList.add('flash'); await window.saw.decider({ type: 'decision', chantier: b.dataset.ch, decision: b.dataset.dec, reponse: b.dataset.rep }); });
+  racine.querySelectorAll('[data-arb]').forEach(b => b.onclick = async () => { b.closest('.attente, .ch')?.classList.add('flash'); await window.saw.decider({ type: 'arbitrage', texte: b.dataset.arb, reponse: b.dataset.rep }); });
+  racine.querySelectorAll('[data-act]').forEach(b => b.onclick = async () => { await window.saw.decider({ type: 'chantier', chantier: b.dataset.ch, action: b.dataset.act }); });
+}
+function majCompteur() { $('nb-attentes').textContent = attentes().length; }
+
+// ---------------- Accueil : chantiers en cours, avec leurs boutons ----------------
+function rendreChantiersAccueil() {
+  const actifs = ((E && E.chantiers && E.chantiers.chantiers) || []).filter(c => !['termine', 'abandonne'].includes(c.statut))
+    .sort((a, b) => (RANG_STATUT[a.statut] ?? 3) - (RANG_STATUT[b.statut] ?? 3)).slice(0, 8);
+  if (!actifs.length) { $('ch-bloc').innerHTML = ''; return; }
+  $('ch-bloc').innerHTML = `<span class="lbl">Chantiers en cours</span>` + actifs.map(c => {
+    const ag = NOM[c.agent] ? c.agent : 'orchestrateur', col = couleur(ag), av = Math.max(0, Math.min(100, +c.avancement || 0));
+    const dec = (c.decisions || []).filter(d => d.statut === 'en-attente');
+    const actions = ['bloque', 'a-trancher', 'en-pause', 'pas-commence'].includes(c.statut) ? [['debloquer', 'Débloquer'], ['continuer', 'Continuer']] : [['continuer', 'Continuer'], ['pause', 'Mettre en pause'], ['terminer', 'Terminé']];
+    return `<div class="ch attente" style="border-left:3px solid ${col}">
+      <div class="ch-tete"><b>${esc(c.nom)}</b><button class="agent-chip" data-agent="${ag}" style="color:${col};border-color:${col}">${esc(NOM[ag])}</button><span class="statut ${esc(c.statut)}">${esc(LIB_STATUT[c.statut] || c.statut || '')}</span></div>
+      <div class="barre-av" title="${av} %"><i style="width:${av}%"></i></div>
+      ${dec.map(d => { const opts = (d.options && d.options.length) ? d.options : ['Oui', 'Non', 'Plus tard']; return `<div class="q">${esc(d.question)}</div><div class="choix">${opts.map((o, i) => `<button class="${i === 0 ? 'prim' : ''}" data-ch="${esc(c.id)}" data-dec="${esc(d.id)}" data-rep="${esc(o)}">${esc(o)}</button>`).join('')}</div>`; }).join('')}
+      <div class="actions">${actions.map(([a, l]) => `<button data-act="${a}" data-ch="${esc(c.id)}">${l}</button>`).join('')}</div></div>`;
+  }).join('');
+  brancherDecisions($('ch-bloc'));
+  $('ch-bloc').querySelectorAll('[data-agent]').forEach(b => b.onclick = () => ouvrirAgent(b.dataset.agent));
+}
+
+// ---------------- Harnais du produit ----------------
+const HP = () => (E && E.harnais_produit) || { nom: '', contexte: '', precisions: [] };
+function majBoutonHarnais() {
+  const h = HP(), b = $('ouvrir-harnais');
+  b.classList.toggle('actif', !!h.contexte);
+  b.innerHTML = h.contexte ? 'HARNAIS' : 'HARNAIS<span class="point"></span>';
+}
+function rendreHarnais(message) {
+  const h = HP();
+  $('harnais-corps').innerHTML = `
+    <div class="champ"><label for="h-nom">Votre produit</label><input id="h-nom" value="${esc(h.nom)}" placeholder="Son nom"></div>
+    <div class="champ"><label for="h-ctx">Son contexte</label><textarea id="h-ctx" placeholder="Ce qu'il est, pour qui, à quel prix, ce qui le rend unique, où il se vend.">${esc(h.contexte)}</textarea></div>
+    <div class="barre-outils"><button class="btn" id="h-ok">Enregistrer</button>${message ? `<span class="ok-msg">${esc(message)}</span>` : ''}</div>
+    <div class="carte"><h3>Ajouter une précision</h3><div class="vide" style="margin-bottom:8px">Au fil de l'usage : un nouveau prix, un client type, une chose à ne jamais dire…</div>
+      <div class="barre-outils"><input id="h-ajout" placeholder="Une phrase" style="flex:1;min-width:180px"><button class="btn sec" id="h-ajouter">Ajouter</button></div>
+      ${(h.precisions || []).length ? `<div class="precisions" style="margin-top:10px">${h.precisions.slice().reverse().slice(0, 15).map(p => `<div class="entree"><span>${esc(p.date)}</span><span>${esc(p.texte)}</span></div>`).join('')}</div>` : ''}</div>
+    <div class="carte"><h3>Le harnais de vos agents</h3><div class="vide" style="margin-bottom:8px">Ce que chacun fait seul. Rien ne sort (mail, post, paiement, contrat) sans votre oui.</div>
+      <div class="niveaux">${AGENTS.map(([id, nom]) => `<span><b style="font-weight:500">${esc(nom)}</b><i style="font-style:normal;color:${couleur(id)}">${esc(niveau(id))}</i></span>`).join('')}</div></div>`;
+  $('h-ok').onclick = async () => { await window.saw.harnais({ nom: $('h-nom').value, contexte: $('h-ctx').value }); E.harnais_produit = { ...HP(), nom: $('h-nom').value.trim(), contexte: $('h-ctx').value.trim() }; majBoutonHarnais(); rendreHarnais('Enregistré. Vos agents le liront à la prochaine demande.'); };
+  $('h-ajouter').onclick = async () => { const v = $('h-ajout').value.trim(); if (!v) return; await window.saw.harnais({ ajout: v }); E.harnais_produit = { ...HP(), precisions: [...(HP().precisions || []), { date: new Date().toLocaleDateString('fr-FR'), texte: v }] }; rendreHarnais('Précision ajoutée.'); };
+}
+function ouvrirHarnais() { if (agentOuvert) fermerAgent(); fermerPilotage(); $('vue-constellation').classList.add('cachee'); $('vue-harnais').classList.remove('cachee'); rendreHarnais(); }
+function fermerHarnais() { $('vue-harnais').classList.add('cachee'); $('vue-constellation').classList.remove('cachee'); }
+$('ouvrir-harnais').onclick = () => ($('vue-harnais').classList.contains('cachee') ? ouvrirHarnais() : fermerHarnais());
+$('retour-harnais').onclick = fermerHarnais;
+
+// Première ouverture : le nom du produit, puis son contexte. Deux questions, sans menu.
+let accueilVu = false;
+function premiereOuverture() {
+  if (accueilVu || !E) return;
+  accueilVu = true;
+  const h = HP();
+  try { if (localStorage.getItem('opencrafts-accueil-' + (E.dossier || '')) === 'plus-tard') return; } catch (e) { /* stockage indisponible */ }
+  if (h.nom && h.contexte) return;
+  const produit = E.produit || {};
+  let nom = h.nom || produit.titre || '', etape = h.nom ? 2 : 1;
+  const boite = $('accueil');
+  const plusTard = () => { boite.hidden = true; try { localStorage.setItem('opencrafts-accueil-' + (E.dossier || ''), 'plus-tard'); } catch (e) { /* rien */ } };
+  const montrer = () => {
+    boite.hidden = false;
+    boite.innerHTML = etape === 1
+      ? `<div class="boite"><span class="etape">1 sur 2</span><h2>Comment s'appelle votre produit ?</h2><p>Vos dix agents vont travailler autour de lui.</p>
+          <input id="acc-nom" value="${esc(nom)}" placeholder="Le nom de votre produit" style="font-size:17px;padding:12px 14px">
+          <div class="bas-boite"><button class="btn" id="acc-suite">Continuer</button><button class="lien" id="acc-tard">Plus tard</button></div></div>`
+      : `<div class="boite"><span class="etape">2 sur 2</span><h2>Racontez-le en quelques phrases.</h2><p>Ce qu'il est, pour qui, à quel prix, ce qui le rend unique. Vous pourrez l'enrichir à tout moment avec le bouton HARNAIS.</p>
+          <textarea id="acc-ctx" placeholder="Par exemple : une gourde isotherme en inox, pour les sportifs, 29 €, fabriquée en France.">${esc(h.contexte || produit.description || '')}</textarea>
+          <div class="bas-boite"><button class="btn" id="acc-fin">Créer mon harnais</button><button class="lien" id="acc-tard">Plus tard</button></div></div>`;
+    $('acc-tard').onclick = plusTard;
+    if (etape === 1) {
+      $('acc-nom').focus();
+      const suite = () => { nom = $('acc-nom').value.trim(); if (!nom) return $('acc-nom').focus(); etape = 2; montrer(); };
+      $('acc-suite').onclick = suite; $('acc-nom').onkeydown = (e) => { if (e.key === 'Enter') suite(); };
+    } else {
+      $('acc-ctx').focus();
+      $('acc-fin').onclick = async () => {
+        const ctx = $('acc-ctx').value.trim(); if (!ctx) return $('acc-ctx').focus();
+        await window.saw.harnais({ nom, contexte: ctx });
+        E.harnais_produit = { ...HP(), nom, contexte: ctx }; $('nom').textContent = nom;
+        boite.hidden = true; majBoutonHarnais();
+      };
+    }
+  };
+  montrer();
+}
+function ouvrirPilotage() { if (agentOuvert) fermerAgent(); $('vue-harnais').classList.add('cachee'); $('vue-constellation').classList.add('cachee'); $('vue-pilotage').classList.remove('cachee'); rendrePilotage(); }
+function fermerPilotage() { $('vue-pilotage').classList.add('cachee'); $('vue-constellation').classList.remove('cachee'); }
+$('ouvrir-pilotage').onclick = () => ($('vue-pilotage').classList.contains('cachee') ? ouvrirPilotage() : fermerPilotage());
+$('retour-pil').onclick = fermerPilotage;
+
+// ---------------- Démarrage ----------------
+let epingle = true;
+$('epingle').onclick = () => { epingle = !epingle; $('epingle').setAttribute('aria-pressed', epingle); window.saw.epingler(epingle); };
+function boucle(ms) {
+  const t = ms / 1000;
+  if (!$('vue-constellation').classList.contains('cachee')) dessinerConstellation(t);
+  if (agentOuvert) dessinerCerveau(t);
+  requestAnimationFrame(boucle);
+}
+window.addEventListener('resize', () => { placer(); if (agentOuvert) [BW, BH] = dimensionner(cb); });
+// La zone des agents change de taille quand les chantiers apparaissent sous elle : on recalcule les positions
+// (sinon le dessin s'étire et les clics tombent à côté).
+if (window.ResizeObserver) {
+  new ResizeObserver(() => placer()).observe(cc);
+  new ResizeObserver(() => { if (agentOuvert) [BW, BH] = dimensionner(cb); }).observe(cb);
+}
+(async () => {
+  placer();
+  const etat = await window.saw.lire();
+  appliquerEtat(etat);
+  recevoir(etat.evenements || [], true);
+  const dernier = (etat.evenements || []).filter(e => e.type !== 'agent-pret').slice(-1)[0];
+  if (dernier) $('phrase').innerHTML = phraseEvenement(dernier);
+  window.saw.surEtat(appliquerEtat);
+  window.saw.surEvenements((evs) => recevoir(evs, false));
+  requestAnimationFrame(boucle);
+})();
+</script>
+</body>
+</html>

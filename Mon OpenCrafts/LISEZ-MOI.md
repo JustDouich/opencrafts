@@ -29,7 +29,8 @@ avec Claude Code.
 
 ## Pré-requis
 
-- L'app Claude avec Claude Code (onglet Code).
-- Python 3 sur l'ordinateur (pour les scripts du skill).
-- Windows pour le dashboard (macOS et Linux : à venir). Il se télécharge tout seul au premier
-  lancement.
+- **Rien à installer pour le dashboard** : Claude l'affiche lui-même.
+- **En direct** (les agents s'animent à chaque action) : l'app Claude, onglet **Code**, avec Python 3 sur
+  l'ordinateur (Windows, macOS ou Linux). Le dashboard s'ouvre dans le panneau à droite de la conversation.
+- **Sur claude.ai, dans l'app Claude en mode conversation ou sur téléphone** : le même dashboard, publié
+  dans la conversation ; il montre l'état du moment et se met à jour à chaque « mon OpenCrafts ».

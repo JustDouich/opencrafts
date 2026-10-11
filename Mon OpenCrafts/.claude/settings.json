@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(python .claude/skills/opencrafts/scripts/:*)",
+      "Bash(python3 .claude/skills/opencrafts/scripts/:*)",
+      "Bash(py .claude/skills/opencrafts/scripts/:*)",
+      "Read(./**)",
+      "Edit(./**)",
+      "Write(./**)",
+      "WebFetch"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "python .claude/skills/opencrafts/scripts/evenement.py prompt", "timeout": 10 }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "python .claude/skills/opencrafts/scripts/evenement.py outil", "timeout": 5 }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "python .claude/skills/opencrafts/scripts/evenement.py fait", "timeout": 5 }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "python .claude/skills/opencrafts/scripts/evenement.py fin", "timeout": 5 }] }
+    ]
+  }
+}

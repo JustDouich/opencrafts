@@ -1,0 +1,6 @@
+<!doctype html><meta charset="utf-8"><title>faux dashboard</title>
+<div id="riche-app">faux dashboard de test</div>
+<script>
+  window.recusExtension = [];
+  window.addEventListener('message', (e) => { if (e.data && e.data.source === 'opencrafts-extension') window.recusExtension.push(e.data); });
+</script>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>LANCER UN CRAFT</title>
+<style>
+  :root { --fond:#3a0003; --carte:#460a0b; --survol:#4f1a18; --rouge:#e3121e; --sur-rouge:#fbf8f1; --texte:#f6f1e7; --texte2:#d3c0b1; --filet:#f6f1e72e; --champ:#f6f1e740; }
+  * { box-sizing: border-box; border-radius: 0; }
+  body { margin: 0; padding: 24px; background: var(--fond); color: var(--texte); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { margin: 0 0 6px; font-size: 20px; font-weight: 800; letter-spacing: .04em; }
+  p { margin: 0 0 16px; color: var(--texte2); font-size: 13px; }
+  .etapes { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+  .etapes span { border: 1px solid var(--filet); padding: 3px 8px; font-size: 11px; font-weight: 800; letter-spacing: .05em; color: var(--texte2); }
+  input { width: 100%; padding: 12px; background: var(--carte); color: var(--texte); border: 1px solid var(--champ); font: inherit; outline: none; }
+  input:focus { border-color: var(--rouge); }
+  .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  button { padding: 10px 18px; font: inherit; font-weight: 800; letter-spacing: .05em; cursor: pointer; }
+  .lancer { background: var(--rouge); color: var(--sur-rouge); border: 1px solid var(--rouge); }
+  .annuler { background: transparent; color: var(--texte); border: 1px solid var(--texte); }
+  .erreur { color: var(--rouge); font-size: 13px; min-height: 18px; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>LANCER UN CRAFT</h1>
+  <p>Vos agents enchaînent les cinq étapes dans la conversation IA ouverte. Ils préparent et écrivent : rien ne sort du projet sans vous (constitution v2.1).</p>
+  <div class="etapes"><span>PROTOTYPAGE</span><span>TEST</span><span>STRATÉGIE MARKETING</span><span>DISTRIBUTION</span><span>RÉSULTAT</span></div>
+  <form id="f">
+    <input id="theme" placeholder="Thème ou projet — ex. les plantes carnivores" autofocus maxlength="200">
+    <div class="erreur" id="erreur"></div>
+    <div class="actions">
+      <button type="button" class="annuler" id="annuler">ANNULER</button>
+      <button type="submit" class="lancer">LANCER</button>
+    </div>
+  </form>
+<script>
+  const champ = document.getElementById('theme');
+  const erreur = document.getElementById('erreur');
+  champ.addEventListener('input', () => { erreur.textContent = ''; });
+  document.getElementById('f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const theme = champ.value.trim();
+    if (!theme) { erreur.textContent = 'Écrivez un thème avant de lancer.'; return; }
+    await window.opencrafts.envoyerTheme(theme);
+  });
+  document.getElementById('annuler').addEventListener('click', () => window.opencrafts.envoyerTheme(null));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.opencrafts.envoyerTheme(null); });
+</script>
+</body>
+</html>

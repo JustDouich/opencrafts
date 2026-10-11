@@ -1,0 +1,52 @@
+{
+  "format": "opencrafts-questions-v1",
+  "regle": "Cinq questions, posées d'un bloc. Toute réponse vide prend la valeur par défaut. Les interdits (OPENCRAFTS.md §5) et le verrou d'Innovation ne sont jamais des questions.",
+  "questions": [
+    {
+      "id": "mission",
+      "texte": "Quelle est votre mission ? Décrivez ce que vous voulez construire ou faire grandir, avec vos mots.",
+      "type": "texte",
+      "obligatoire": true,
+      "complement": {
+        "id": "activite",
+        "texte": "C'est plutôt…",
+        "type": "choix",
+        "options": ["produit-physique", "service", "logiciel-numerique", "creation-contenu", "autre"],
+        "defaut": "autre"
+      }
+    },
+    {
+      "id": "autonomie",
+      "texte": "Jusqu'où vos agents avancent-ils seuls ? Dans tous les cas, rien ne sort de votre entreprise (mail, post, paiement, contrat) sans votre oui.",
+      "type": "choix",
+      "options": [
+        { "id": "prudent", "libelle": "Ils préparent, je lance tout moi-même" },
+        { "id": "equilibre", "libelle": "Ils avancent seuls sur le travail interne, je valide tout ce qui sort" },
+        { "id": "autonome", "libelle": "Ils avancent loin seuls, je ne suis appelé que pour ce qui sort ou ce qui coûte" }
+      ],
+      "defaut": "equilibre"
+    },
+    {
+      "id": "budget",
+      "texte": "Combien acceptez-vous de dépenser par mois pour vos agents (abonnements, API) ? Vous pouvez répondre 0.",
+      "type": "montant-euros-par-mois",
+      "defaut": 0
+    },
+    {
+      "id": "heure",
+      "texte": "À quelle heure voulez-vous votre point du jour ? C'est là que vous validerez tout en une fois.",
+      "type": "heure",
+      "defaut": "12:00"
+    },
+    {
+      "id": "presence",
+      "texte": "Où êtes-vous présent ?",
+      "type": "groupe",
+      "champs": [
+        { "id": "ia", "texte": "Quelle IA utilisez-vous ?", "type": "choix", "options": ["claude", "chatgpt", "gemini", "mistral", "autre"], "defaut": "autre" },
+        { "id": "reseaux", "texte": "Sur quels réseaux publiez-vous ?", "type": "choix-multiple", "options": ["linkedin", "x", "instagram", "tiktok", "facebook"], "defaut": [] },
+        { "id": "dossier_sync", "texte": "Un dossier synchronisé pour la sauvegarde (Drive, OneDrive, Dropbox…) ?", "type": "chemin-ou-vide", "defaut": null }
+      ]
+    }
+  ]
+}

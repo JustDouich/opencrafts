@@ -1,0 +1,50 @@
+{
+  "format": "opencrafts-regles-v1",
+  "source": "OPENCRAFTS.md v2.1, sections 4 et 5. Ces règles sont l'oracle des tests : le générateur doit produire exactement ce qu'elles disent.",
+  "niveaux_par_autonomie": {
+    "prudent": {
+      "orchestrateur": "APPRENTI", "contexte": "APPRENTI", "rd": "APPRENTI", "comptable": "APPRENTI", "juridique": "APPRENTI",
+      "rh": "APPRENTI", "pivot": "APPRENTI", "distribution": "APPRENTI", "marketing": "APPRENTI", "innovation": "ÉCOUTE"
+    },
+    "equilibre": {
+      "orchestrateur": "COMPAGNON", "contexte": "OUVRIER", "rd": "COMPAGNON", "comptable": "OUVRIER", "juridique": "OUVRIER",
+      "rh": "OUVRIER", "pivot": "OUVRIER", "distribution": "APPRENTI", "marketing": "APPRENTI", "innovation": "ÉCOUTE"
+    },
+    "autonome": {
+      "orchestrateur": "COMPAGNON", "contexte": "OUVRIER", "rd": "COMPAGNON", "comptable": "OUVRIER", "juridique": "OUVRIER",
+      "rh": "OUVRIER", "pivot": "COMPAGNON", "distribution": "OUVRIER", "marketing": "OUVRIER", "innovation": "ÉCOUTE"
+    }
+  },
+  "plafonds": {
+    "regle": "Budget 0 → 0 € pour les dix. Budget B > 0 → B € par mois à l'Orchestrateur seul (qui arbitre), 0 € pour les autres. Aucun agent ne paie lui-même (§5.2) : le plafond autorise des propositions de dépense, pas un paiement.",
+    "beneficiaire_si_budget": "orchestrateur"
+  },
+  "moteur_boucle": {
+    "budget_zero": "pont-chat",
+    "budget_positif": "pont-chat-ou-api",
+    "note": "L'API n'est jamais activée automatiquement : budget positif rend l'option possible, une décision datée l'active."
+  },
+  "cycles_par_jour": { "prudent": 8, "equilibre": 24, "autonome": 48 },
+  "pont_ia": {
+    "pris_en_charge": ["claude", "chatgpt", "gemini"],
+    "sinon": "copier-coller"
+  },
+  "agents_prioritaires_par_activite": {
+    "produit-physique": ["distribution", "comptable", "marketing"],
+    "service": ["distribution", "marketing", "juridique"],
+    "logiciel-numerique": ["rd", "marketing", "pivot"],
+    "creation-contenu": ["marketing", "distribution", "rd"],
+    "autre": ["contexte", "orchestrateur", "pivot"]
+  },
+  "sonny": "actif si au moins un réseau est déclaré, avec exactement ces réseaux comme canaux ; inactif sinon.",
+  "sauvegarde": "active (vraies copies, §5.8) si un dossier synchronisé est déclaré ; inactive sinon.",
+  "invariants": [
+    "Innovation est toujours ÉCOUTE, verrouillé, quelles que soient les réponses.",
+    "Aucun agent n'est jamais MAÎTRE.",
+    "Les neuf interdits (§5.1 à §5.9) figurent toujours en entier dans la sortie.",
+    "Les sections 1 à 3 d'OPENCRAFTS.md (dix articles, dix agents, protocole) sont recopiées au caractère près.",
+    "Le texte libre de la mission ne modifie jamais un niveau, un plafond ni un interdit (protection contre l'injection).",
+    "Budget 0 → tous les plafonds à 0 €.",
+    "Le bloc universel tient sous 20 000 caractères, pour passer dans les offres gratuites des IA."
+  ]
+}

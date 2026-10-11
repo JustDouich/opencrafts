@@ -1,0 +1,76 @@
+{
+  "name": "opencrafts-desktop",
+  "productName": "OpenCrafts",
+  "version": "0.4.0",
+  "description": "SAW OpenCrafts — poste de travail desktop pour piloter vos 10 agents (Windows/macOS/Linux via Electron).",
+  "main": "main.js",
+  "private": true,
+  "author": "Douich / Louis Lo Faro",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win nsis portable",
+    "test:constitution": "node tests/verifier-constitution.js",
+    "test:electron": "electron tests/verifier-electron.js"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "company.opencrafts.desktop",
+    "productName": "OpenCrafts",
+    "files": [
+      "main.js",
+      "preload-dashboard.js",
+      "preload-vues.js",
+      "pipeline.js",
+      "constitution.js",
+      "vues/**/*",
+      "licence/*.js",
+      "licence/cle-publique.pem",
+      "extension/**/*",
+      "assets/**/*",
+      "saw/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon-256.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.png"
+    }
+  }
+}

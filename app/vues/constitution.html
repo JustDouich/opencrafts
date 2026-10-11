@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>CONSTITUTION — HARNAIS ET GARDE-FOUS</title>
+<style>
+  :root { --fond:#3a0003; --carte:#460a0b; --survol:#4f1a18; --rouge:#e3121e; --sur-rouge:#fbf8f1; --texte:#f6f1e7; --texte2:#d3c0b1; --filet:#f6f1e72e; --or:#e8b93b; }
+  * { box-sizing: border-box; border-radius: 0; }
+  body { margin: 0; padding: 28px; background: var(--fond); color: var(--texte); font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: .04em; }
+  h2 { margin: 28px 0 10px; font-size: 14px; font-weight: 800; letter-spacing: .08em; color: var(--texte2); }
+  .sous { color: var(--texte2); margin: 4px 0 0; font-size: 13px; }
+  .grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+  .agent { background: var(--carte); border: 1px solid var(--filet); padding: 14px; }
+  .agent .tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .agent b { font-weight: 800; text-transform: uppercase; letter-spacing: .03em; font-size: 13px; }
+  .niveau { font-size: 11px; font-weight: 800; letter-spacing: .06em; padding: 2px 6px; white-space: nowrap; }
+  .niveau.COMPAGNON { background: var(--rouge); color: var(--sur-rouge); }
+  .niveau.OUVRIER { border: 1px solid var(--texte); }
+  .niveau.APPRENTI { border: 1px dashed var(--texte2); color: var(--texte2); }
+  .niveau.ÉCOUTE { border: 1px solid var(--or); color: var(--or); }
+  .agent p { margin: 0; color: var(--texte2); font-size: 13px; }
+  .interdit { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--filet); }
+  .interdit span { font-weight: 800; color: var(--rouge); font-variant-numeric: tabular-nums; }
+  .interdit b { display: block; font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: .05em; }
+  .bandeau { margin-top: 18px; border: 1px solid var(--rouge); padding: 10px 14px; font-weight: 800; letter-spacing: .03em; }
+</style>
+</head>
+<body>
+  <h1>CONSTITUTION <span id="version"></span> — HARNAIS ET GARDE-FOUS</h1>
+  <p class="sous">Ce que chaque agent fait seul, et ce qu'aucun ne fait jamais. Source : OPENCRAFTS.md, sections 4 et 5.</p>
+  <div class="bandeau" id="plafond"></div>
+  <h2>LES DIX HARNAIS PAR DÉFAUT</h2>
+  <div class="grille" id="harnais"></div>
+  <h2>LES INTERDITS — AUCUN NIVEAU NE LES LÈVE</h2>
+  <div id="interdits"></div>
+<script>
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  window.opencrafts.constitution().then((c) => {
+    document.getElementById('version').textContent = 'V' + c.VERSION;
+    document.getElementById('plafond').textContent = 'PLAFOND DE DÉPENSE : ' + c.PLAFOND_EUROS + ' € POUR LES DIX AGENTS · AUCUN AGENT N\'EST MAÎTRE · INNOVATION VERROUILLÉ EN ÉCOUTE';
+    document.getElementById('harnais').innerHTML = c.HARNAIS.map((h) =>
+      `<div class="agent"><div class="tete"><b>${esc(h.nom)}</b><span class="niveau ${esc(h.niveau)}">${esc(h.niveau)}${h.verrouille ? ' · VERROUILLÉ' : ''}</span></div><p>${esc(h.enClair)}</p></div>`).join('');
+    document.getElementById('interdits').innerHTML = c.INTERDITS.map((i) =>
+      `<div class="interdit"><span>§${esc(i.section)}</span><div><b>${esc(i.titre)}</b>${esc(i.regle)}</div></div>`).join('');
+    document.body.dataset.pret = '1';
+  });
+</script>
+</body>
+</html>

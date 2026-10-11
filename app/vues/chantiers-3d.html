@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>CHANTIERS — VUE 3D</title>
+<style>
+  :root { --fond:#3a0003; --carte:#460a0b; --survol:#4f1a18; --rouge:#e3121e; --sur-rouge:#fbf8f1; --texte:#f6f1e7; --texte2:#d3c0b1; --filet:#f6f1e72e; --champ:#f6f1e740; --or:#e8b93b; }
+  * { box-sizing: border-box; border-radius: 0; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--fond); color: var(--texte); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--filet); }
+  h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: .05em; }
+  .source { color: var(--texte2); font-size: 12px; }
+  .compteurs { display: flex; gap: 14px; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .compteurs div { text-align: right; }
+  .compteurs b { display: block; font-size: 22px; font-weight: 800; line-height: 1; }
+  .compteurs span { font-size: 10px; letter-spacing: .08em; color: var(--texte2); }
+  .barre { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+  button { background: transparent; color: var(--texte); border: 1px solid var(--champ); padding: 6px 12px; font: 800 11px system-ui, sans-serif; letter-spacing: .06em; cursor: pointer; }
+  button[aria-pressed="true"] { background: var(--rouge); border-color: var(--rouge); color: var(--sur-rouge); }
+  main { display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
+  #scene { position: relative; overflow: hidden; perspective: 1600px; cursor: grab; touch-action: none; }
+  #scene.glisse { cursor: grabbing; }
+  #monde { position: absolute; left: 50%; top: 46%; transform-style: preserve-3d; }
+  #plateau { position: absolute; transform-style: preserve-3d; }
+  .sol { position: absolute; background: var(--carte); outline: 1px solid var(--filet); }
+  .couloir { position: absolute; border-left: 1px solid var(--filet); }
+  .etiquette-couloir { position: absolute; font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--texte2); white-space: nowrap; transform-origin: left center; }
+  .tour { position: absolute; transform-style: preserve-3d; cursor: pointer; }
+  .face { position: absolute; left: 0; top: 0; backface-visibility: visible; }
+  .tour .dessus { outline: 1px solid var(--fond); }
+  .tour:hover .face, .tour.choisie .face { filter: brightness(1.35); }
+  .tour.cachee { display: none; }
+  .bulle { position: absolute; pointer-events: none; background: var(--fond); border: 1px solid var(--texte); padding: 4px 8px; font-size: 12px; font-weight: 800; white-space: nowrap; display: none; z-index: 5; }
+  aside { border-left: 1px solid var(--filet); padding: 20px; overflow: auto; }
+  aside h2 { margin: 0 0 4px; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+  aside .meta { color: var(--texte2); font-size: 12px; margin-bottom: 12px; }
+  aside ul { margin: 8px 0 0; padding-left: 18px; }
+  aside li { margin-bottom: 4px; }
+  .jauge { height: 8px; border: 1px solid var(--texte); margin: 10px 0 4px; }
+  .jauge i { display: block; height: 100%; background: var(--rouge); }
+  .pastille { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .08em; padding: 2px 6px; margin-right: 6px; }
+  .legende { margin-top: 20px; border-top: 1px solid var(--filet); padding-top: 12px; font-size: 12px; color: var(--texte2); }
+  .legende div { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .legende i { width: 16px; height: 16px; display: inline-block; }
+  .vide { padding: 40px; max-width: 640px; }
+  .vide code { background: var(--carte); padding: 1px 4px; }
+  .aide { position: absolute; left: 16px; bottom: 12px; font-size: 11px; color: var(--texte2); letter-spacing: .04em; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>CHANTIERS — VUE 3D</h1>
+    <div class="source" id="source">Chargement…</div>
+  </div>
+  <div class="compteurs" id="compteurs"></div>
+  <div class="barre" id="filtres"></div>
+</header>
+<main>
+  <div id="scene"><div id="monde"><div id="plateau"></div></div><div class="bulle" id="bulle"></div>
+    <div class="aide">GLISSER : TOURNER · MOLETTE : ZOOM · CLIC : DÉTAIL</div></div>
+  <aside id="detail">
+    <h2>CLIQUEZ UNE TOUR</h2>
+    <div class="meta">Une tour = un chantier. Couloir = agent responsable. Hauteur = avancement estimé.</div>
+    <div class="legende" id="legende"></div>
+  </aside>
+</main>
+<script>
+const AGENTS = [
+  ['orchestrateur', 'ORCHESTRATEUR'], ['contexte', 'CONTEXTE'], ['rd', 'R&D'], ['comptable', 'COMPTABLE'],
+  ['juridique', 'JURIDIQUE'], ['rh', 'RH'], ['pivot', 'PIVOT'], ['distribution', 'DISTRIBUTION'],
+  ['marketing', 'MARKETING'], ['innovation', 'INNOVATION'],
+];
+// Distinction par la forme, pas par une couleur inventée (charte) : plein = fait,
+// rouge sur contour = en cours, or pointillé = à trancher, contour pâle = pas commencé, hachuré = abandonné.
+const STATUTS = {
+  'termine':      { nom: 'TERMINÉ',       cote: 'var(--rouge)', dessus: 'var(--rouge)', bord: 'var(--rouge)', style: 'solid' },
+  'en-cours':     { nom: 'EN COURS',      cote: 'var(--survol)', dessus: 'var(--rouge)', bord: 'var(--rouge)', style: 'solid' },
+  'a-trancher':   { nom: 'À TRANCHER',    cote: 'var(--carte)', dessus: 'var(--or)', bord: 'var(--or)', style: 'dashed' },
+  'pas-commence': { nom: 'PAS COMMENCÉ',  cote: 'var(--carte)', dessus: 'var(--carte)', bord: 'var(--texte2)', style: 'dashed' },
+  'abandonne':    { nom: 'ABANDONNÉ',     cote: 'repeating-linear-gradient(45deg, var(--carte) 0 4px, var(--texte2) 4px 5px)', dessus: 'repeating-linear-gradient(45deg, var(--carte) 0 4px, var(--texte2) 4px 5px)', bord: 'var(--texte2)', style: 'solid' },
+};
+const LARGEUR_COULOIR = 96, PAS = 78, BASE = 44;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const VUE_INITIALE = { rx: 56, rz: -30, zoom: 0.56 };
+const vue = Object.assign({}, VUE_INITIALE);
+let chantiers = [];
+
+function appliquerVue() {
+  document.getElementById('monde').style.transform = `scale(${vue.zoom}) rotateX(${vue.rx}deg) rotateZ(${vue.rz}deg)`;
+}
+
+function face(w, h, transform, fond, bord, style) {
+  const f = document.createElement('div');
+  f.className = 'face';
+  f.style.cssText = `width:${w}px;height:${h}px;transform:${transform};background:${fond};border:1px ${style} ${bord};`;
+  return f;
+}
+
+function construireTour(c, x, y) {
+  const s = STATUTS[c.statut] || STATUTS['pas-commence'];
+  const h = 10 + Math.round((c.avancement || 0) * 1.4);
+  const t = document.createElement('div');
+  t.className = 'tour';
+  t.dataset.id = c.id;
+  t.dataset.projet = c.projet;
+  t.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  t.style.width = t.style.height = BASE + 'px';
+  // Le dessus flotte à la hauteur h ; les quatre côtés pivotent autour de leur arête au sol pour se dresser.
+  const dessus = face(BASE, BASE, `translateZ(${h}px)`, s.dessus, s.bord, s.style);
+  dessus.classList.add('dessus');
+  t.appendChild(dessus);
+  [
+    [BASE, h, 'rotateX(90deg)'],
+    [BASE, h, `translateY(${BASE}px) rotateX(90deg)`],
+    [h, BASE, 'rotateY(-90deg)'],
+    [h, BASE, `translateX(${BASE}px) rotateY(-90deg)`],
+  ].forEach(([w, hh, tr]) => {
+    const f = face(w, hh, tr, s.cote, s.bord, s.style);
+    f.style.transformOrigin = 'top left';
+    t.appendChild(f);
+  });
+  t.addEventListener('click', (e) => { e.stopPropagation(); montrer(c); });
+  t.addEventListener('mousemove', (e) => bulle(e, c.nom));
+  t.addEventListener('mouseleave', () => { document.getElementById('bulle').style.display = 'none'; });
+  return t;
+}
+
+function bulle(e, texte) {
+  const b = document.getElementById('bulle');
+  const r = document.getElementById('scene').getBoundingClientRect();
+  b.textContent = texte;
+  b.style.display = 'block';
+  b.style.left = (e.clientX - r.left + 14) + 'px';
+  b.style.top = (e.clientY - r.top + 10) + 'px';
+}
+
+function montrer(c) {
+  document.querySelectorAll('.tour.choisie').forEach((t) => t.classList.remove('choisie'));
+  const t = document.querySelector(`.tour[data-id="${CSS.escape(c.id)}"]`);
+  if (t) t.classList.add('choisie');
+  const s = STATUTS[c.statut] || STATUTS['pas-commence'];
+  const agent = (AGENTS.find((a) => a[0] === c.agent) || [null, c.agent])[1];
+  document.getElementById('detail').innerHTML =
+    `<h2>${esc(c.nom)}</h2>
+     <div class="meta">${esc(c.projet)} · ${esc(agent)} · depuis le ${esc(c.debut.split('-').reverse().join('/'))}</div>
+     <span class="pastille" style="border:1px ${s.style} ${s.bord}">${s.nom}</span>
+     <div class="jauge"><i style="width:${Number(c.avancement) || 0}%"></i></div>
+     <div class="meta">Avancement estimé : ${Number(c.avancement) || 0} %</div>
+     <p>${esc(c.resume)}</p>
+     ${c.reste && c.reste.length ? `<b>CE QUI RESTE</b><ul>${c.reste.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : '<b>RIEN NE RESTE</b>'}
+     <div class="meta" style="margin-top:12px">Source : ${esc(c.source)}</div>
+     <div class="legende" id="legende"></div>`;
+  legende();
+}
+
+function legende() {
+  document.getElementById('legende').innerHTML = Object.values(STATUTS).map((s) =>
+    // Pastille = un côté de tour coiffé de son toit : plein rouge (terminé) ≠ sombre à toit rouge (en cours).
+    `<div><i style="background:${s.dessus.startsWith('repeating') ? s.cote : `linear-gradient(${s.dessus} 0 5px, transparent 5px), ${s.cote}`};border:1px ${s.style} ${s.bord}"></i>${s.nom}</div>`).join('');
+}
+
+function construire(donnees) {
+  chantiers = donnees.chantiers || [];
+  const plateau = document.getElementById('plateau');
+  plateau.innerHTML = '';
+  const parAgent = {};
+  chantiers.slice().sort((a, b) => a.debut.localeCompare(b.debut)).forEach((c) => (parAgent[c.agent] = parAgent[c.agent] || []).push(c));
+  const profondeur = Math.max(3, ...Object.values(parAgent).map((l) => l.length)) * PAS + 40;
+  const largeur = AGENTS.length * LARGEUR_COULOIR;
+  plateau.style.transform = `translate(${-largeur / 2}px, ${-profondeur / 2}px)`;
+  const sol = document.createElement('div');
+  sol.className = 'sol';
+  sol.style.cssText = `width:${largeur}px;height:${profondeur}px;`;
+  plateau.appendChild(sol);
+  AGENTS.forEach(([cle, nom], i) => {
+    const x = i * LARGEUR_COULOIR;
+    if (i) { const l = document.createElement('div'); l.className = 'couloir'; l.style.cssText = `left:${x}px;top:0;height:${profondeur}px;`; plateau.appendChild(l); }
+    const e = document.createElement('div');
+    e.className = 'etiquette-couloir';
+    e.textContent = nom;
+    e.style.left = (x + 8) + 'px';
+    e.style.top = (profondeur + 10) + 'px';
+    e.style.transform = 'rotateZ(60deg)';
+    plateau.appendChild(e);
+    (parAgent[cle] || []).forEach((c, j) => plateau.appendChild(construireTour(c, x + (LARGEUR_COULOIR - BASE) / 2, profondeur - 30 - BASE - j * PAS)));
+  });
+  const compte = (st) => chantiers.filter((c) => c.statut === st).length;
+  document.getElementById('compteurs').innerHTML = Object.entries(STATUTS).map(([k, s]) => `<div><b>${compte(k)}</b><span>${s.nom}</span></div>`).join('');
+  const projets = ['TOUS', ...new Set(chantiers.map((c) => c.projet))];
+  document.getElementById('filtres').innerHTML = projets.map((p, i) => `<button aria-pressed="${i === 0}" data-p="${esc(p)}">${esc(p.toUpperCase())}</button>`).join('') +
+    '<span style="flex:1"></span><button id="dessus">VUE DE DESSUS</button><button id="reinit">RÉINITIALISER</button>';
+  document.querySelectorAll('#filtres [data-p]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('#filtres [data-p]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll('.tour').forEach((t) => t.classList.toggle('cachee', b.dataset.p !== 'TOUS' && t.dataset.projet !== b.dataset.p));
+  }));
+  document.getElementById('dessus').addEventListener('click', () => { vue.rx = 0; vue.rz = 0; appliquerVue(); });
+  document.getElementById('reinit').addEventListener('click', () => { Object.assign(vue, VUE_INITIALE); appliquerVue(); });
+  legende();
+  appliquerVue();
+}
+
+// Interactions : glisser pour tourner, molette pour zoomer.
+(function () {
+  const scene = document.getElementById('scene');
+  let depart = null;
+  scene.addEventListener('pointerdown', (e) => { depart = { x: e.clientX, y: e.clientY, rx: vue.rx, rz: vue.rz }; scene.classList.add('glisse'); scene.setPointerCapture(e.pointerId); });
+  scene.addEventListener('pointermove', (e) => {
+    if (!depart) return;
+    vue.rz = depart.rz + (e.clientX - depart.x) * 0.3;
+    vue.rx = Math.max(0, Math.min(80, depart.rx - (e.clientY - depart.y) * 0.25));
+    appliquerVue();
+  });
+  const fin = () => { depart = null; scene.classList.remove('glisse'); };
+  scene.addEventListener('pointerup', fin);
+  scene.addEventListener('pointercancel', fin);
+  scene.addEventListener('wheel', (e) => { e.preventDefault(); vue.zoom = Math.max(0.35, Math.min(1.8, vue.zoom * (e.deltaY < 0 ? 1.08 : 0.93))); appliquerVue(); }, { passive: false });
+})();
+
+window.opencrafts.chantiers().then((r) => {
+  if (!r.ok) {
+    document.getElementById('source').textContent = 'Aucun fichier de chantiers trouvé';
+    document.querySelector('main').innerHTML = `<div class="vide"><h1>PAS ENCORE DE CHANTIERS À AFFICHER</h1>
+      <p>${esc(r.raison)}</p>
+      <p>La vue lit <code>chantiers.json</code> dans le dossier de votre OpenCrafts (menu OpenCrafts → « Choisir le dossier de mon OpenCrafts… »).
+      Demandez à votre Orchestrateur : « écris chantiers.json au format opencrafts-chantiers-v1 à partir de JOURNAL.md ».</p></div>`;
+    document.body.dataset.pret = '1';
+    return;
+  }
+  document.getElementById('source').textContent = `${r.chemin} · mis à jour le ${r.donnees.misAJour.split('-').reverse().join('/')} · ${r.donnees.chantiers.length} chantiers`;
+  construire(r.donnees);
+  document.body.dataset.pret = '1';
+});
+</script>
+</body>
+</html>

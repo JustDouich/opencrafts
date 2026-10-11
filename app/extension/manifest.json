@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "OpenCrafts — Pont Dashboard",
+  "version": "0.4.0",
+  "description": "Synchronise votre JOURNAL.md et la file d'arbitrage (v2.1) entre Claude, ChatGPT ou Gemini et votre dashboard OpenCrafts.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*",
+    "https://opencrafts.company/*",
+    "file:///*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://claude.ai/*"
+      ],
+      "js": [
+        "content-claude.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://chatgpt.com/*"
+      ],
+      "js": [
+        "content-chatgpt.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "content-gemini.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://opencrafts.company/*",
+        "file:///*"
+      ],
+      "js": [
+        "arbitrage.js",
+        "content-dashboard.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
